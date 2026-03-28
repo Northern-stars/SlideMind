@@ -132,8 +132,8 @@ export default function ChatPanel() {
             </button>
           </div>
 
-          {/* Collapsible content */}
-          <div className={`overflow-hidden transition-all duration-200 ease-in-out ${conceptSummaryCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
+          {/* Scrollable content */}
+          <div className={`transition-all duration-200 ease-in-out ${conceptSummaryCollapsed ? 'max-h-0 opacity-0' : 'max-h-[250px]'} overflow-y-auto`}>
             {activeSlide.summary && (
               <p className="text-sm text-[var(--text-secondary)] mb-4 leading-relaxed">
                 {activeSlide.summary}

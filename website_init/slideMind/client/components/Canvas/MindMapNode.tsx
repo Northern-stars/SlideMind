@@ -9,26 +9,32 @@ interface Props {
   node: MindMapNodeType
   isSelected: boolean
   isEditing: boolean
+  isDragging: boolean
+  dragOffset: { x: number; y: number }
   onSelect: (e: React.MouseEvent) => void
   onStartEdit: () => void
   onEndEdit: () => void
   onUpdateText: (text: string) => void
   onPositionChange: (position: { x: number; y: number }) => void
+  onMouseUp?: () => void
+  onDragStart: (e: React.MouseEvent) => void
 }
 
 export default function MindMapNode({
   node,
   isSelected,
   isEditing,
+  isDragging: externalIsDragging,
+  dragOffset: externalDragOffset,
   onSelect,
   onStartEdit,
   onEndEdit,
   onUpdateText,
   onPositionChange,
+  onMouseUp,
+  onDragStart,
 }: Props) {
   const [editText, setEditText] = useState(node.text)
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const nodeRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -44,43 +50,9 @@ export default function MindMapNode({
     e.stopPropagation()
 
     onSelect(e)
-
-    const rect = nodeRef.current?.getBoundingClientRect()
-    if (rect) {
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      })
-      setIsDragging(true)
-    }
+    // Delegate drag start to parent
+    onDragStart(e)
   }
-
-  useEffect(() => {
-    if (!isDragging) return
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const canvas = document.querySelector('.canvas-area')
-      if (!canvas) return
-
-      const canvasRect = canvas.getBoundingClientRect()
-      const newX = e.clientX - canvasRect.left - dragOffset.x
-      const newY = e.clientY - canvasRect.top - dragOffset.y
-
-      onPositionChange({ x: newX, y: newY })
-    }
-
-    const handleMouseUp = () => {
-      setIsDragging(false)
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [isDragging, dragOffset])
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -105,13 +77,14 @@ export default function MindMapNode({
   return (
     <div
       ref={nodeRef}
-      className={`mindmap-node ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''}`}
+      className={`mindmap-node ${isSelected ? 'selected' : ''} ${externalIsDragging ? 'dragging' : ''}`}
       style={{
         left: node.position.x,
         top: node.position.y,
       }}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
+      onMouseUp={onMouseUp}
     >
       {isEditing ? (
         <textarea

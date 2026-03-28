@@ -73,7 +73,7 @@ def delete_mindmap(mindmap_id):
 
 def create_empty_mindmap(title='Untitled Mind Map'):
     """Create a new empty mindmap with a root node"""
-    now = datetime.now().isoformat()
+    now = datetime.now()
     mindmap_id = f'mindmap-{now.strftime("%Y%m%d%H%M%S")}' if isinstance(now, str) else now.strftime("%Y%m%d%H%M%S")
 
     mindmap_data = {

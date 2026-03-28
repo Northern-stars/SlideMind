@@ -579,7 +579,6 @@ html, body {
   position: relative;
   height: 100%;
   overflow: hidden;
-  overflow: hidden;
   background: var(--canvas-bg);
 }
 
@@ -597,6 +596,7 @@ html, body {
   position: absolute;
   inset: 0;
   overflow: visible;
+  will-change: transform;
 }
 
 .canvas-svg {

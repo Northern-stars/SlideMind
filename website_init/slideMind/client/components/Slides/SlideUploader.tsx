@@ -132,6 +132,17 @@ export default function SlideUploader() {
     }
   }
 
+  const handleAddSummaryCard = () => {
+    if (!currentSlide) return
+    const summaryCardConcept: Concept = {
+      id: `summary-${Date.now()}`,
+      slideId: currentSlide.id,
+      title: `📄 ${currentSlide.filename || '文件摘要'}`,
+      description: currentSlide.summary || '暂无摘要内容',
+    }
+    addCard(summaryCardConcept)
+  }
+
   return (
     <div className="space-y-6">
       {/* Upload Zone */}
@@ -204,6 +215,18 @@ export default function SlideUploader() {
           {/* Summary */}
           {currentSlide.summary && (
             <div className="card mb-4">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <h4 className="text-sm font-semibold text-[var(--text-primary)]">📝 摘要</h4>
+                <button
+                  onClick={handleAddSummaryCard}
+                  className="px-3 py-1 text-xs font-medium rounded-full bg-[var(--secondary)] text-white hover:bg-[var(--secondary)]/90 transition-colors flex items-center gap-1"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  添加到画布
+                </button>
+              </div>
               <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 {currentSlide.summary}
               </p>

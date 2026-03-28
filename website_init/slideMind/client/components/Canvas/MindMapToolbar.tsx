@@ -92,7 +92,18 @@ export default function MindMapToolbar() {
   }
 
   const handleAddNode = () => {
-    if (!mindMapData) return
+    // If no mindMapData exists, create a default one
+    if (!mindMapData) {
+      const defaultData: MindMapData = {
+        id: `mindmap-${Date.now()}`,
+        title: '新建思维导图',
+        nodes: [],
+        edges: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      setMindMapData(defaultData)
+    }
     const newNode: MindMapNode = {
       id: `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       text: newNodeText || '# 新节点\n点击编辑内容',

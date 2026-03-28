@@ -220,6 +220,26 @@ export default function SlideWorkflow() {
             
             {activeSlide.summary ? (
               <div className="bg-[var(--bg-secondary)] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-[var(--text-primary)]">📝 摘要</h4>
+                  <button
+                    onClick={() => {
+                      const summaryCardConcept: Concept = {
+                        id: `summary-${Date.now()}`,
+                        slideId: activeSlide.id,
+                        title: `📄 ${activeSlide.filename || '文件摘要'}`,
+                        description: activeSlide.summary,
+                      }
+                      addCard(summaryCardConcept)
+                    }}
+                    className="px-3 py-1 text-xs font-medium rounded-full bg-[var(--secondary)] text-white hover:bg-[var(--secondary)]/90 transition-colors flex items-center gap-1"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    添加到画布
+                  </button>
+                </div>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                   {activeSlide.summary}
                 </p>
