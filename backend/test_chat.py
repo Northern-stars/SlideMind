@@ -191,7 +191,7 @@ def test_pdf_with_ocr():
 
     try:
         print(f"Analyzing PDF with OCR: {pdf_path}")
-        result = api.analyze_pdf_with_ocr(pdf_path, prompt="请总结这个PDF的内容")
+        result = api.analyze_pdf_with_ocr(pdf_path, prompt="Conclude the content of this PDF")
 
         print(f"Pages processed: {len(result.get('pages', []))}")
         print(f"Full text length: {len(result.get('full_text', ''))} chars")
@@ -284,16 +284,16 @@ def main():
     print("API Calling Test Suite")
     print("=" * 50 + "\n")
 
-    test_chat()
-    test_multiturn_chat()
-    test_pptx_conversion()
-    test_pptx_image_analysis()
-    test_pdf_file_analysis()
-    test_ocr_image()
+    # test_chat()
+    # test_multiturn_chat()
+    # test_pptx_conversion()
+    # test_pptx_image_analysis()
+    # test_pdf_file_analysis()
+    # test_ocr_image()
     test_pdf_with_ocr()
-    test_pptx_with_ocr()
-    test_txt_file()
-    test_docx_file()
+    # test_pptx_with_ocr()
+    # test_txt_file()
+    # test_docx_file()
 
     print("=" * 50)
     print("All tests completed")

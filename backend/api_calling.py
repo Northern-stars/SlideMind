@@ -330,7 +330,7 @@ class api_access:
 
         return self._call_minimax(messages, max_tokens=1000)
 
-    def analyze_pptx_file(self, pptx_path, prompt="请描述这个PPT文件的内容"):
+    def analyze_pptx_file(self, pptx_path, prompt="Describe the content of this PPT file"):
         """Upload PPTX file to model for analysis
 
         Args:
@@ -428,7 +428,7 @@ class api_access:
         }
 
     def analyze_pdf_with_ocr(self, pdf_path, prompt="请总结这个PDF的内容"):
-        """Analyze PDF by converting to images, OCR, then summarize
+        """Analyze PDF by extracting text directly, then summarize
 
         Args:
             pdf_path: PDF file path
@@ -437,29 +437,25 @@ class api_access:
         Returns:
             dict: Results for each page
         """
-        # Convert PDF to images
-        images = pdf_to_images(pdf_path)
+        # Extract text directly from PDF using pypdf
+        text_content = extract_text_from_pdf(pdf_path)
 
-        results = []
-        for i, img in enumerate(images):
-            ocr_text = extract_text_from_image(img)
-            results.append({
-                "page": i + 1,
-                "ocr_text": ocr_text
-            })
-
-        # Combine all OCR text
-        full_text = "\n\n".join([f"第{r['page']}页：\n{r['ocr_text']}" for r in results])
+        if not text_content.strip():
+            return {
+                "pages": [],
+                "full_text": "",
+                "summary": "PDF中未提取到文字内容"
+            }
 
         # Send to MiniMax for summary
         messages = [
-            {"role": "user", "content": f"{prompt}\n\n{full_text}"}
+            {"role": "user", "content": f"{prompt}\n\nPDF文字内容：\n{text_content}"}
         ]
         summary = self._call_minimax(messages, max_tokens=4096)
 
         return {
-            "pages": results,
-            "full_text": full_text,
+            "pages": [],
+            "full_text": text_content,
             "summary": summary
         }
 
