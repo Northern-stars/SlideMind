@@ -505,7 +505,7 @@ class api_access:
         """
         print(f"Explaining term: {term}")
         
-        prompt = f"Briefly explain the following term or concept in one paragraph:\n\n{term}"
+        prompt = f"Briefly explain the following term or concept in one paragraph:\n\n{term}, limit content to 100 words."
 
         messages = [
             {"role": "user", "content": prompt}

@@ -688,6 +688,19 @@ html, body {
   color: var(--text-primary);
 }
 
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-body {
+  margin-top: 16px;
+}
+
 /* ==================== UPLOAD ZONE ==================== */
 
 .upload-zone {

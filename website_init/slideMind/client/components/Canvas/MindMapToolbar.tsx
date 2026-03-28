@@ -21,6 +21,8 @@ export default function MindMapToolbar() {
   const [isLoading, setIsLoading] = useState(false)
   const [mindMapList, setMindMapList] = useState<{ id: string; title: string; nodeCount: number }[]>([])
   const [showLoadModal, setShowLoadModal] = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveFileName, setSaveFileName] = useState('')
   const [newNodeText, setNewNodeText] = useState('')
 
   const handleEnterMindMap = () => {
@@ -77,15 +79,24 @@ export default function MindMapToolbar() {
     }
   }
 
-  const handleSaveMindMap = async () => {
+  const handleSaveMindMap = () => {
     if (!mindMapData) return
+    setSaveFileName(mindMapData.title || '新建思维导图')
+    setShowSaveModal(true)
+  }
+
+  const handleConfirmSave = async () => {
+    if (!mindMapData || !saveFileName.trim()) return
     setIsLoading(true)
     try {
+      const updatedData = { ...mindMapData, title: saveFileName.trim(), updatedAt: new Date().toISOString() }
       await fetch(`http://localhost:3001/api/mindmaps/${mindMapData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mindMapData),
+        body: JSON.stringify(updatedData),
       })
+      setMindMapData(updatedData)
+      setShowSaveModal(false)
     } catch (error) {
       console.error('Failed to save mindmap:', error)
     } finally {
@@ -263,6 +274,44 @@ export default function MindMapToolbar() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Modal */}
+      {showSaveModal && (
+        <div className="modal-overlay" onClick={() => setShowSaveModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>保存思维导图</h3>
+              <button onClick={() => setShowSaveModal(false)} className="modal-close">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="flex flex-col gap-3">
+                <label className="text-sm font-medium text-[var(--text-secondary)]">文件名</label>
+                <input
+                  type="text"
+                  value={saveFileName}
+                  onChange={(e) => setSaveFileName(e.target.value)}
+                  placeholder="输入文件名..."
+                  className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleConfirmSave()}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowSaveModal(false)} className="btn btn-secondary">
+                取消
+              </button>
+              <button onClick={handleConfirmSave} className="btn btn-primary" disabled={!saveFileName.trim() || isLoading}>
+                {isLoading ? '保存中...' : '确认保存'}
+              </button>
             </div>
           </div>
         </div>
