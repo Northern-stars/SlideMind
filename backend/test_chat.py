@@ -279,6 +279,22 @@ def test_docx_file():
         print(f"Test 5: FAILED - {e}\n")
 
 
+def test_explain_term():
+    """Test explain_term function"""
+    print("=" * 50)
+    print("Test 10: Explain Term")
+    print("=" * 50)
+
+    api = api_access()
+
+    try:
+        result = api.explain_term("Machine Learning")
+        print(f"Result: {result}")
+        print("\nTest 10: PASSED\n")
+    except Exception as e:
+        print(f"Test 10: FAILED - {e}\n")
+
+
 def main():
     print("\n" + "=" * 50)
     print("API Calling Test Suite")
@@ -290,10 +306,11 @@ def main():
     # test_pptx_image_analysis()
     # test_pdf_file_analysis()
     # test_ocr_image()
-    test_pdf_with_ocr()
+    # test_pdf_with_ocr()
     # test_pptx_with_ocr()
     # test_txt_file()
     # test_docx_file()
+    test_explain_term()
 
     print("=" * 50)
     print("All tests completed")

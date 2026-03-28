@@ -363,7 +363,7 @@ class api_access:
             "response": response
         }
 
-    def analyze_pdf_file(self, pdf_path, prompt="请描述这个PDF文件的内容"):
+    def analyze_pdf_file(self, pdf_path, prompt="Describe the content of this PDF file"):
         """Upload PDF file to model for analysis
 
         Args:
@@ -396,7 +396,7 @@ class api_access:
             "response": response
         }
 
-    def analyze_image_with_ocr(self, image_path, prompt="请描述这张图片的内容"):
+    def analyze_image_with_ocr(self, image_path, prompt="Describe the content of this image"):
         """Analyze image using OCR + MiniMax
 
         Args:
@@ -427,7 +427,7 @@ class api_access:
             "response": response
         }
 
-    def analyze_pdf_with_ocr(self, pdf_path, prompt="请总结这个PDF的内容"):
+    def analyze_pdf_with_ocr(self, pdf_path, prompt="Summarize the content of this PDF"):
         """Analyze PDF by extracting text directly, then summarize
 
         Args:
@@ -459,7 +459,7 @@ class api_access:
             "summary": summary
         }
 
-    def analyze_pptx_with_ocr(self, pptx_path, prompt="请总结这个PPT的内容"):
+    def analyze_pptx_with_ocr(self, pptx_path, prompt="Describe the content of this PPT file"):
         """Analyze PPTX by converting to images, OCR, then summarize
 
         Args:
@@ -494,3 +494,19 @@ class api_access:
             "full_text": full_text,
             "summary": summary
         }
+
+    def explain_term(self, term):
+        """Explain a term or concept using MiniMax
+
+        Args:
+            term: Term or concept to explain
+        Returns:
+            str: Explanation of the term
+        """
+        
+        prompt = f"Briefly explain the following term or concept in one paragraph:\n\n{term}"
+
+        messages = [
+            {"role": "user", "content": prompt}
+        ]
+        return self._call_minimax(messages, max_tokens=1024)
