@@ -15,6 +15,7 @@ interface Props {
   onStartEdit: () => void
   onEndEdit: () => void
   onUpdateText: (text: string) => void
+  onUpdateColor: (color: string | undefined) => void
   onPositionChange: (position: { x: number; y: number }) => void
   onMouseUp?: () => void
   onDragStart: (e: React.MouseEvent) => void
@@ -30,6 +31,7 @@ export default function MindMapNode({
   onStartEdit,
   onEndEdit,
   onUpdateText,
+  onUpdateColor,
   onPositionChange,
   onMouseUp,
   onDragStart,
@@ -121,7 +123,8 @@ export default function MindMapNode({
       style={{
         left: node.position.x,
         top: node.position.y,
-      }}
+        '--node-color': node.color || '#000000',
+      } as React.CSSProperties}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
       onMouseUp={handleMouseUp}
@@ -156,6 +159,73 @@ export default function MindMapNode({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </button>
+          <div className="mindmap-node-color-picker">
+            <input
+              type="color"
+              value={node.color || '#000000'}
+              onChange={(e) => onUpdateColor(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              title="选择边框颜色"
+            />
+            {node.color && (
+              <button
+                className="mindmap-node-btn color-clear"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUpdateColor(undefined)
+                }}
+                title="清除颜色"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="mindmap-node-color-presets">
+            <button
+              className="mindmap-node-btn color-preset"
+              style={{ backgroundColor: '#EF4444' }}
+              onClick={(e) => { e.stopPropagation(); onUpdateColor('#EF4444') }}
+              title="红色"
+            />
+            <button
+              className="mindmap-node-btn color-preset"
+              style={{ backgroundColor: '#F97316' }}
+              onClick={(e) => { e.stopPropagation(); onUpdateColor('#F97316') }}
+              title="橙色"
+            />
+            <button
+              className="mindmap-node-btn color-preset"
+              style={{ backgroundColor: '#EAB308' }}
+              onClick={(e) => { e.stopPropagation(); onUpdateColor('#EAB308') }}
+              title="黄色"
+            />
+            <button
+              className="mindmap-node-btn color-preset"
+              style={{ backgroundColor: '#22C55E' }}
+              onClick={(e) => { e.stopPropagation(); onUpdateColor('#22C55E') }}
+              title="绿色"
+            />
+            <button
+              className="mindmap-node-btn color-preset"
+              style={{ backgroundColor: '#3B82F6' }}
+              onClick={(e) => { e.stopPropagation(); onUpdateColor('#3B82F6') }}
+              title="蓝色"
+            />
+            <button
+              className="mindmap-node-btn color-preset"
+              style={{ backgroundColor: '#8B5CF6' }}
+              onClick={(e) => { e.stopPropagation(); onUpdateColor('#8B5CF6') }}
+              title="紫色"
+            />
+            <button
+              className="mindmap-node-btn color-preset"
+              style={{ backgroundColor: '#EC4899' }}
+              onClick={(e) => { e.stopPropagation(); onUpdateColor('#EC4899') }}
+              title="粉色"
+            />
+          </div>
         </div>
       )}
     </div>

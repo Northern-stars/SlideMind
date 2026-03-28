@@ -1055,7 +1055,7 @@ html, body {
 }
 
 .mindmap-node:hover {
-  border-color: var(--primary);
+  border-color: var(--node-color, var(--primary));
   box-shadow: var(--shadow-lg);
 }
 
@@ -1064,8 +1064,8 @@ html, body {
 }
 
 .mindmap-node.selected {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-light), var(--shadow-lg);
+  border-color: var(--node-color, var(--primary));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-color, var(--primary)) 20%, transparent), var(--shadow-lg);
 }
 
 .mindmap-node.dragging {
@@ -1168,6 +1168,77 @@ html, body {
   background: var(--primary-light);
 }
 
+.mindmap-node-color-picker {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mindmap-node-color-picker input[type="color"] {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 2px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.mindmap-node-color-picker input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.mindmap-node-color-picker input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.mindmap-node-btn.color-clear {
+  color: var(--text-tertiary);
+}
+
+.mindmap-node-btn.color-clear:hover {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+}
+
+.mindmap-node-color-presets {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0 0 0;
+  flex-wrap: wrap;
+  max-width: 140px;
+}
+
+.mindmap-node-btn.color-preset {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.mindmap-node-btn.color-preset:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.mindmap-node-btn.color-preset.no-color {
+  background: var(--surface);
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mindmap-node-btn.color-preset.no-color:hover {
+  color: var(--error);
+}
+
 /* ==================== MINDMAP TOOLTIP ==================== */
 
 .mindmap-tooltip {
@@ -1262,7 +1333,6 @@ html, body {
 /* ==================== MINDMAP EDGE ==================== */
 
 .mindmap-edge {
-  stroke: var(--primary);
   stroke-width: 2;
   fill: none;
   opacity: 0.6;

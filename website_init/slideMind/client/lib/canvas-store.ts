@@ -44,6 +44,7 @@ export interface MindMapNode {
   id: string
   text: string
   position: { x: number; y: number }
+  color?: string  // Border color for selected state
 }
 
 export interface MindMapEdge {

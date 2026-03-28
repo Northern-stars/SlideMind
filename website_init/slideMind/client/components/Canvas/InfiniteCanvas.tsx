@@ -60,6 +60,19 @@ export default function InfiniteCanvas() {
   const [isMindMapConnecting, setIsMindMapConnecting] = useState(false)
   const [mindMapConnectionStart, setMindMapConnectionStart] = useState<string | null>(null)
 
+  // Use refs to track latest connection state for event handlers (avoid stale closure)
+  const isMindMapConnectingRef = useRef(isMindMapConnecting)
+  const isConnectingRef = useRef(isConnecting)
+
+  // Sync refs when state changes
+  useEffect(() => {
+    isMindMapConnectingRef.current = isMindMapConnecting
+  }, [isMindMapConnecting])
+
+  useEffect(() => {
+    isConnectingRef.current = isConnecting
+  }, [isConnecting])
+
   // Handle wheel zoom
   const handleWheel = useCallback((e: WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -122,13 +135,13 @@ export default function InfiniteCanvas() {
         },
       })
     }
-    if (isConnecting) {
+    if (isConnectingRef.current) {
       setConnectingMousePos({
         x: (e.clientX - panOffset.x) / zoom,
         y: (e.clientY - panOffset.y) / zoom,
       })
     }
-    if (isMindMapConnecting) {
+    if (isMindMapConnectingRef.current) {
       setConnectingMousePos({
         x: (e.clientX - panOffset.x) / zoom,
         y: (e.clientY - panOffset.y) / zoom,
@@ -147,6 +160,7 @@ export default function InfiniteCanvas() {
     e.stopPropagation()
 
     if (e.shiftKey && !isConnecting) {
+      isConnectingRef.current = true  // Update ref immediately for event handlers
       startConnection(card.id)
       return
     }
@@ -180,6 +194,7 @@ export default function InfiniteCanvas() {
     }
 
     if (e.shiftKey && !isMindMapConnecting) {
+      isMindMapConnectingRef.current = true  // Update ref immediately for event handlers
       setIsMindMapConnecting(true)
       setMindMapConnectionStart(nodeId)
       return
@@ -224,6 +239,10 @@ export default function InfiniteCanvas() {
     updateMindMapNode(nodeId, { text })
   }
 
+  const handleMindMapNodeColorUpdate = (nodeId: string, color: string | undefined) => {
+    updateMindMapNode(nodeId, { color })
+  }
+
   // Floating toolbar handlers
   const handleFloatingAddNode = () => {
     // If no mindMapData exists, create a default one
@@ -262,10 +281,12 @@ export default function InfiniteCanvas() {
   }
 
   const handleStartFloatingConnect = () => {
+    isMindMapConnectingRef.current = true  // Update ref immediately for event handlers
     setIsMindMapConnecting(true)
   }
 
   const handleStopFloatingConnect = () => {
+    isMindMapConnectingRef.current = false
     setIsMindMapConnecting(false)
     setMindMapConnectionStart(null)
   }
@@ -332,6 +353,23 @@ export default function InfiniteCanvas() {
       x: node.position.x + 90,
       y: node.position.y + 30,
     }
+  }
+
+  // Get edge colors based on connected node colors
+  const getEdgeColors = (edge: MindMapEdge) => {
+    const fromNode = mindMapData?.nodes.find((n) => n.id === edge.from)
+    const toNode = mindMapData?.nodes.find((n) => n.id === edge.to)
+    const fromColor = fromNode?.color || null
+    const toColor = toNode?.color || null
+
+    if (fromColor && toColor) {
+      return { fromColor, toColor, hasGradient: true }
+    } else if (fromColor) {
+      return { fromColor, toColor: fromColor, hasGradient: false }
+    } else if (toColor) {
+      return { fromColor: toColor, toColor, hasGradient: false }
+    }
+    return { fromColor: '#000000', toColor: '#000000', hasGradient: false }
   }
 
   // Generate SVG path for mindmap edge
@@ -409,17 +447,30 @@ export default function InfiniteCanvas() {
             >
               <polygon points="0 0, 10 3.5, 0 7" fill="#A855F7" />
             </marker>
+            {/* Pre-define all edge gradients in defs */}
+            {mindMapMode && (mindMapData?.edges || []).map((edge) => {
+              const colors = getEdgeColors(edge)
+              return (
+                <linearGradient key={`gradient-${edge.id}`} id={`edge-gradient-${edge.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor={colors.fromColor} />
+                  <stop offset="100%" stopColor={colors.toColor} />
+                </linearGradient>
+              )
+            })}
           </defs>
 
           {/* MindMap edges */}
-          {mindMapMode && (mindMapData?.edges || []).map((edge) => (
-            <g key={edge.id}>
-              <path
-                d={getMindMapEdgePath(edge)}
-                className="mindmap-edge"
-              />
-            </g>
-          ))}
+          {mindMapMode && (mindMapData?.edges || []).map((edge) => {
+            return (
+              <g key={edge.id}>
+                <path
+                  d={getMindMapEdgePath(edge)}
+                  className="mindmap-edge"
+                  stroke={`url(#edge-gradient-${edge.id})`}
+                />
+              </g>
+            )
+          })}
 
           {/* Regular connections */}
           {!mindMapMode && connections.map((conn) => (
@@ -472,6 +523,7 @@ export default function InfiniteCanvas() {
               setMindMapEditing(false)
             }}
             onUpdateText={(text) => handleMindMapNodeTextUpdate(node.id, text)}
+            onUpdateColor={(color) => handleMindMapNodeColorUpdate(node.id, color)}
             onPositionChange={(pos) => handleMindMapNodePositionChange(node.id, pos)}
             onMouseUp={() => handleMindMapNodeMouseUp(node.id)}
             isDragging={draggingMindMapNode === node.id}
