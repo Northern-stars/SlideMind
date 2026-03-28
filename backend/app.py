@@ -19,6 +19,9 @@ app.register_blueprint(chat_bp, url_prefix='/api/chat')
 @app.route('/api/health')
 def health():
     return {'status': 'ok'}
+@app.route("/chat")
+def chat():
+    return {"message": "Hello from the backend!"}
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3001, debug=True)

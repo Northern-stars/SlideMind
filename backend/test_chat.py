@@ -74,9 +74,9 @@ def test_pptx_conversion():
 
 
 def test_pptx_image_analysis():
-    """Test PPTX image analysis with AI model"""
+    """Test PPTX file upload analysis with AI model"""
     print("=" * 50)
-    print("Test 3b: PPTX Image Analysis")
+    print("Test 3b: PPTX File Upload Analysis")
     print("=" * 50)
 
     pptx_path = os.path.join(os.path.dirname(__file__), "uploads", "test.pptx")
@@ -90,16 +90,144 @@ def test_pptx_image_analysis():
 
     try:
         print(f"Analyzing PPTX: {pptx_path}")
-        results = api.analyze_pptx_images(pptx_path, prompt="请描述这张幻灯片的内容")
+        result = api.analyze_pptx_file(pptx_path, prompt="请描述这个PPT文件的内容")
 
-        print(f"\nTotal slides analyzed: {len(results)}")
-        for result in results:
-            print(f"\n--- Page {result['page']} ---")
-            print(f"Response: {result['response'][:200]}..." if len(result.get('response', '')) > 200 else f"Response: {result.get('response', '')}")
+        if "error" in result:
+            print(f"Error: {result['error']}")
+            print(f"File info: {result.get('file_info')}")
+        else:
+            print(f"File ID: {result['file_info'].get('file_id')}")
+            print(f"Response: {result['response'][:500]}..." if len(result.get('response', '')) > 500 else f"Response: {result.get('response', '')}")
 
         print("\nTest 3b: PASSED\n")
     except Exception as e:
         print(f"Test 3b: FAILED - {e}\n")
+
+
+def test_pdf_file_analysis():
+    """Test PDF file upload analysis with AI model"""
+    print("=" * 50)
+    print("Test 6: PDF File Upload Analysis")
+    print("=" * 50)
+
+    pdf_path = os.path.join(os.path.dirname(__file__), "uploads", "test.pdf")
+
+    if not os.path.exists(pdf_path):
+        print(f"Test file not found: {pdf_path}")
+        print("Test 6: SKIPPED\n")
+        return
+
+    api = api_access()
+
+    try:
+        print(f"Analyzing PDF: {pdf_path}")
+        result = api.analyze_pdf_file(pdf_path, prompt="请描述这个PDF文件的内容")
+
+        if "error" in result:
+            print(f"Error: {result['error']}")
+            print(f"File info: {result.get('file_info')}")
+        else:
+            print(f"File ID: {result['file_info'].get('file_id')}")
+            print(f"Response: {result['response'][:500]}..." if len(result.get('response', '')) > 500 else f"Response: {result.get('response', '')}")
+
+        print("\nTest 6: PASSED\n")
+    except Exception as e:
+        print(f"Test 6: FAILED - {e}\n")
+
+
+def test_ocr_image():
+    """Test OCR on single image"""
+    print("=" * 50)
+    print("Test 7: OCR Image Analysis")
+    print("=" * 50)
+
+    # Create a test image with text
+    from PIL import Image as PILImage
+    import io
+
+    img_path = os.path.join(os.path.dirname(__file__), "uploads", "test_ocr.png")
+
+    # Create test image if not exists
+    if not os.path.exists(img_path):
+        print("Creating test OCR image...")
+        # Create image with text
+        test_img = PILImage.new('RGB', (400, 100), color='white')
+        from PIL import ImageDraw, ImageFont
+        draw = ImageDraw.Draw(test_img)
+        draw.text((10, 30), "Hello World! 你好世界！", fill='black')
+        test_img.save(img_path)
+
+    api = api_access()
+
+    try:
+        print(f"Analyzing image: {img_path}")
+        from api_calling import extract_text_from_image
+        text = extract_text_from_image(img_path)
+        print(f"OCR Text: {text}")
+
+        # Also test full analysis
+        result = api.analyze_image_with_ocr(img_path, prompt="请描述这张图片")
+        print(f"Response: {result.get('response', '')[:200]}...")
+
+        print("\nTest 7: PASSED\n")
+    except Exception as e:
+        print(f"Test 7: FAILED - {e}\n")
+
+
+def test_pdf_with_ocr():
+    """Test PDF analysis with OCR"""
+    print("=" * 50)
+    print("Test 8: PDF OCR Analysis")
+    print("=" * 50)
+
+    pdf_path = os.path.join(os.path.dirname(__file__), "uploads", "test.pdf")
+
+    if not os.path.exists(pdf_path):
+        print(f"Test file not found: {pdf_path}")
+        print("Test 8: SKIPPED\n")
+        return
+
+    api = api_access()
+
+    try:
+        print(f"Analyzing PDF with OCR: {pdf_path}")
+        result = api.analyze_pdf_with_ocr(pdf_path, prompt="请总结这个PDF的内容")
+
+        print(f"Pages processed: {len(result.get('pages', []))}")
+        print(f"Full text length: {len(result.get('full_text', ''))} chars")
+        print(f"Summary: {result.get('summary', '')[:300]}...")
+
+        print("\nTest 8: PASSED\n")
+    except Exception as e:
+        print(f"Test 8: FAILED - {e}\n")
+
+
+def test_pptx_with_ocr():
+    """Test PPTX analysis with OCR"""
+    print("=" * 50)
+    print("Test 9: PPTX OCR Analysis")
+    print("=" * 50)
+
+    pptx_path = os.path.join(os.path.dirname(__file__), "uploads", "test.pptx")
+
+    if not os.path.exists(pptx_path):
+        print(f"Test file not found: {pptx_path}")
+        print("Test 9: SKIPPED\n")
+        return
+
+    api = api_access()
+
+    try:
+        print(f"Analyzing PPTX with OCR: {pptx_path}")
+        result = api.analyze_pptx_with_ocr(pptx_path, prompt="请总结这个PPT的内容")
+
+        print(f"Slides processed: {len(result.get('slides', []))}")
+        print(f"Full text length: {len(result.get('full_text', ''))} chars")
+        print(f"Summary: {result.get('summary', '')[:300]}...")
+
+        print("\nTest 9: PASSED\n")
+    except Exception as e:
+        print(f"Test 9: FAILED - {e}\n")
 
 
 def test_txt_file():
@@ -156,12 +284,16 @@ def main():
     print("API Calling Test Suite")
     print("=" * 50 + "\n")
 
-    # test_chat()
-    # test_multiturn_chat()
+    test_chat()
+    test_multiturn_chat()
     test_pptx_conversion()
     test_pptx_image_analysis()
-    # test_txt_file()
-    # test_docx_file()
+    test_pdf_file_analysis()
+    test_ocr_image()
+    test_pdf_with_ocr()
+    test_pptx_with_ocr()
+    test_txt_file()
+    test_docx_file()
 
     print("=" * 50)
     print("All tests completed")

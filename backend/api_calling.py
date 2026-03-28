@@ -1,13 +1,17 @@
 import io
+import os
 import base64
 import requests
 from PIL import Image
 from spire.presentation import Presentation
+from pdf2image import convert_from_path
+from pypdf import PdfReader
 
 
-KEY = "sk-cp-kybfKR17owcghdMDQp_rmpRfKdUXRs0Y0KP9W6zstrpQLjoeScvTqrpr_e78Sr2X9mMlS_fxp3CMCKkl1qKEtl5P3fl7fYdSaX1iykCTgYGunkhoTE5yerw"
+KEY = os.environ.get('MINIMAX_API_KEY', '')
 BASE_URL = "https://api.minimax.chat/v1"
-
+FILE_URL = "https://api.minimax.chat/v1/files/upload"
+MCP_URL = os.environ.get('MCP_URL', 'https://api.minimaxi.com')
 
 def pptx_to_images(pptx_path, dpi=300):
     """Convert PPTX file to image list by page (using Spire.Presentation)
@@ -35,11 +39,215 @@ def pptx_to_images(pptx_path, dpi=300):
     return images
 
 
+def pdf_to_images(pdf_path, dpi=200):
+    """Convert PDF file to image list by page
+
+    Args:
+        pdf_path: PDF file path
+        dpi: Image quality (default 200)
+
+    Returns:
+        List[PIL.Image]: Image list for each page
+    """
+    images = convert_from_path(pdf_path, dpi=dpi)
+
+    # Convert RGBA to RGB if needed
+    result_images = []
+    for img in images:
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+        result_images.append(img)
+
+    return result_images
+
+
+def extract_text_from_pdf(pdf_path):
+    """Extract text content from PDF file
+
+    Args:
+        pdf_path: PDF file path
+
+    Returns:
+        str: Extracted text content
+    """
+    reader = PdfReader(pdf_path)
+    text_content = []
+
+    for page in reader.pages:
+        text = page.extract_text()
+        if text:
+            text_content.append(text)
+
+    return "\n\n".join(text_content)
+
+
+class OCRProcessor:
+    """OCR processor using PaddleOCR"""
+
+    def __init__(self, lang='ch', use_angle_cls=True):
+        """Initialize OCR
+
+        Args:
+            lang: Language, 'ch' for Chinese, 'en' for English, 'ch_sim' for simplified Chinese
+            use_angle_cls: Whether to use angle classification
+        """
+        self.ocr = None
+        self.lang = lang
+        self.use_angle_cls = use_angle_cls
+
+    def _get_ocr(self):
+        """Lazy initialization of OCR"""
+        if self.ocr is None:
+            from paddleocr import PaddleOCR
+            self.ocr = PaddleOCR(use_angle_cls=self.use_angle_cls, lang=self.lang)
+        return self.ocr
+
+    def extract_text(self, image_path):
+        """Extract text from single image
+
+        Args:
+            image_path: Path to image file or PIL Image
+
+        Returns:
+            str: Extracted text
+        """
+        ocr = self._get_ocr()
+
+        # PaddleOCR only accepts file paths, not PIL Image
+        if isinstance(image_path, Image.Image):
+            # Save to temp file
+            import tempfile
+            temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            image_path.save(temp_file.name, format='PNG')
+            temp_file.close()
+            image_path = temp_file.name
+
+        result = ocr.ocr(image_path)
+
+        if not result:
+            return ""
+
+        # Handle new PaddleOCR format: list of dicts with 'rec_texts'
+        if isinstance(result, list) and result and isinstance(result[0], dict):
+            if 'rec_texts' in result[0]:
+                return "\n".join(result[0].get('rec_texts', []))
+
+        # Old format: list of lists [[box, (text, score)], ...]
+        if isinstance(result, list) and result and isinstance(result[0], list):
+            lines = []
+            for item in result:
+                if item and len(item) >= 2:
+                    text_data = item[1]
+                    if isinstance(text_data, tuple):
+                        text = text_data[0]
+                    elif isinstance(text_data, str):
+                        text = text_data
+                    else:
+                        text = ''
+                    if text:
+                        lines.append(text)
+            return "\n".join(lines)
+
+        return ""
+
+    def extract_text_batch(self, image_paths):
+        """Extract text from multiple images
+
+        Args:
+            image_paths: List of image paths or PIL Images
+
+        Returns:
+            list: List of extracted texts
+        """
+        results = []
+        for img_path in image_paths:
+            text = self.extract_text(img_path)
+            results.append(text)
+        return results
+
+
+# Global OCR instance
+_ocr_processor = None
+
+
+def get_ocr_processor(lang='ch'):
+    """Get or create global OCR processor"""
+    global _ocr_processor
+    if _ocr_processor is None:
+        _ocr_processor = OCRProcessor(lang=lang)
+    return _ocr_processor
+
+
+def extract_text_from_image(image_path):
+    """Extract text from single image using OCR
+
+    Args:
+        image_path: Path to image or PIL Image
+
+    Returns:
+        str: Extracted text
+    """
+    ocr = get_ocr_processor()
+    return ocr.extract_text(image_path)
+
+
+class MCPClient:
+    """MCP client for MiniMax API"""
+
+    def __init__(self, server_url=MCP_URL, api_key=KEY):
+        self.server_url = server_url
+        self.api_key = api_key
+        self.session_id = None
+
+    def _request(self, method, endpoint, data=None, files=None):
+        """Make request to MCP server"""
+        url = f"{self.server_url}{endpoint}"
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+
+        if files:
+            # Multipart form data
+            response = requests.post(url, headers=headers, files=files, timeout=120)
+        else:
+            # JSON request
+            headers["Content-Type"] = "application/json"
+            response = requests.post(url, headers=headers, json=data, timeout=120)
+
+        response.raise_for_status()
+        return response.json()
+
+    def upload_file(self, file_path, purpose="file-extract"):
+        """Upload file via MCP
+
+        Args:
+            file_path: Path to the file
+            purpose: Purpose of the file
+
+        Returns:
+            dict: File info including file_id
+        """
+        with open(file_path, "rb") as f:
+            files = {
+                "file": (os.path.basename(file_path), f),
+                "purpose": (None, purpose)
+            }
+            return self._request("POST", "/tools/upload_file", files=files)
+
+    def list_files(self):
+        """List uploaded files"""
+        return self._request("GET", "/tools/list_files")
+
+    def delete_file(self, file_id):
+        """Delete a file"""
+        return self._request("DELETE", f"/tools/delete_file?file_id={file_id}")
+
+
 class api_access:
-    def __init__(self, key=KEY, model="MiniMax-M2"):
+    def __init__(self, key=KEY, model="MiniMax-M2.7"):
         self.api_key = key
         self.model = model
         self.base_url = BASE_URL
+        self.file_url = FILE_URL
+        self.mcp_client = MCPClient(api_key=key)
 
     def _call_minimax(self, messages, max_tokens=4096, temperature=0.7):
         """Call MiniMax ChatCompletion API
@@ -69,6 +277,18 @@ class api_access:
 
         data = response.json()
         return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+    def upload_file(self, file_path, purpose="file-extract"):
+        """Upload file to MiniMax API via MCP
+
+        Args:
+            file_path: Path to the file
+            purpose: Purpose of the file, "file-extract" or "batch"
+
+        Returns:
+            dict: File info including file_id
+        """
+        return self.mcp_client.upload_file(file_path, purpose)
 
     def read_file(self, path):
         """Read and analyze a file"""
@@ -110,47 +330,171 @@ class api_access:
 
         return self._call_minimax(messages, max_tokens=1000)
 
-    def analyze_pptx_images(self, pptx_path, prompt="Describe the content of this slide"):
-        """Convert PPTX to images and send to model for analysis
+    def analyze_pptx_file(self, pptx_path, prompt="请描述这个PPT文件的内容"):
+        """Upload PPTX file to model for analysis
 
         Args:
             pptx_path: PPTX file path
             prompt: Prompt for the model
 
         Returns:
-            List of recognition results for each slide
+            dict: File info and model's response
+        """
+        # Upload file
+        file_info = self.upload_file(pptx_path, purpose="file-extract")
+        file_id = file_info.get("file_id")
+
+        if not file_id:
+            return {"error": "File upload failed", "file_info": file_info}
+
+        # Use file for chat
+        messages = [
+            {
+                "role": "user",
+                "content": prompt,
+                "file_ids": [file_id]
+            }
+        ]
+
+        response = self._call_minimax(messages, max_tokens=4096)
+
+        return {
+            "file_info": file_info,
+            "response": response
+        }
+
+    def analyze_pdf_file(self, pdf_path, prompt="请描述这个PDF文件的内容"):
+        """Upload PDF file to model for analysis
+
+        Args:
+            pdf_path: PDF file path
+            prompt: Prompt for the model
+
+        Returns:
+            dict: File info and model's response
+        """
+        # Upload file
+        file_info = self.upload_file(pdf_path, purpose="file-extract")
+        file_id = file_info.get("file_id")
+
+        if not file_id:
+            return {"error": "File upload failed", "file_info": file_info}
+
+        # Use file for chat
+        messages = [
+            {
+                "role": "user",
+                "content": prompt,
+                "file_ids": [file_id]
+            }
+        ]
+
+        response = self._call_minimax(messages, max_tokens=4096)
+
+        return {
+            "file_info": file_info,
+            "response": response
+        }
+
+    def analyze_image_with_ocr(self, image_path, prompt="请描述这张图片的内容"):
+        """Analyze image using OCR + MiniMax
+
+        Args:
+            image_path: Path to image file or PIL Image
+            prompt: Prompt for the model
+
+        Returns:
+            dict: OCR text and model's response
+        """
+        # Extract text via OCR
+        ocr = get_ocr_processor()
+        ocr_text = ocr.extract_text(image_path)
+
+        if not ocr_text.strip():
+            return {
+                "ocr_text": "",
+                "response": "图片中未提取到文字内容"
+            }
+
+        # Send to MiniMax
+        messages = [
+            {"role": "user", "content": f"{prompt}\n\n图片中的文字内容：\n{ocr_text}"}
+        ]
+        response = self._call_minimax(messages, max_tokens=4096)
+
+        return {
+            "ocr_text": ocr_text,
+            "response": response
+        }
+
+    def analyze_pdf_with_ocr(self, pdf_path, prompt="请总结这个PDF的内容"):
+        """Analyze PDF by converting to images, OCR, then summarize
+
+        Args:
+            pdf_path: PDF file path
+            prompt: Prompt for the model
+
+        Returns:
+            dict: Results for each page
+        """
+        # Convert PDF to images
+        images = pdf_to_images(pdf_path)
+
+        results = []
+        for i, img in enumerate(images):
+            ocr_text = extract_text_from_image(img)
+            results.append({
+                "page": i + 1,
+                "ocr_text": ocr_text
+            })
+
+        # Combine all OCR text
+        full_text = "\n\n".join([f"第{r['page']}页：\n{r['ocr_text']}" for r in results])
+
+        # Send to MiniMax for summary
+        messages = [
+            {"role": "user", "content": f"{prompt}\n\n{full_text}"}
+        ]
+        summary = self._call_minimax(messages, max_tokens=4096)
+
+        return {
+            "pages": results,
+            "full_text": full_text,
+            "summary": summary
+        }
+
+    def analyze_pptx_with_ocr(self, pptx_path, prompt="请总结这个PPT的内容"):
+        """Analyze PPTX by converting to images, OCR, then summarize
+
+        Args:
+            pptx_path: PPTX file path
+            prompt: Prompt for the model
+
+        Returns:
+            dict: Results for each slide
         """
         # Convert PPTX to images
         images = pptx_to_images(pptx_path)
 
         results = []
         for i, img in enumerate(images):
-            # Convert PIL Image to bytes
-            buf = io.BytesIO()
-            img.save(buf, format='PNG')
-            img_bytes = buf.getvalue()
-            buf.close()
-
-            # Encode image to base64
-            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
-
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_base64}"}},
-                        {"type": "text", "text": f"第 {i+1} 页: {prompt}"}
-                    ]
-                }
-            ]
-
-            response = self._call_minimax(messages, max_tokens=2048)
-
+            ocr_text = extract_text_from_image(img)
             results.append({
-                "page": i + 1,
-                "response": response
+                "slide": i + 1,
+                "ocr_text": ocr_text
             })
 
-        return results
+        # Combine all OCR text
+        full_text = "\n\n".join([f"第{r['slide']}页：\n{r['ocr_text']}" for r in results])
 
+        # Send to MiniMax for summary
+        messages = [
+            {"role": "user", "content": f"{prompt}\n\n{full_text}"}
+        ]
+        summary = self._call_minimax(messages, max_tokens=4096)
 
+        return {
+            "slides": results,
+            "full_text": full_text,
+            "summary": summary
+        }
