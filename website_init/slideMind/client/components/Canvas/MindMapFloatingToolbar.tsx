@@ -19,7 +19,7 @@ export default function MindMapFloatingToolbar({
   onDeleteSelected,
   onAutoLayout,
 }: Props) {
-  const { selectedMindMapNodeId } = useCanvasStore()
+  const { selectedMindMapNodeId, isDragToolActive, setDragToolActive } = useCanvasStore()
 
   return (
     <div className="mindmap-floating-toolbar">
@@ -34,9 +34,19 @@ export default function MindMapFloatingToolbar({
       </button>
 
       <button
+        className={`mindmap-floating-btn ${isDragToolActive ? 'active' : ''}`}
+        onClick={() => setDragToolActive(!isDragToolActive)}
+        title="拖拽工具"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+        </svg>
+      </button>
+
+      <button
         className={`mindmap-floating-btn ${isConnecting ? 'active' : ''}`}
         onClick={isConnecting ? onStopConnect : onStartConnect}
-        title={isConnecting ? '取消连接' : '连接模式 (Shift+点击)'}
+        title={isConnecting ? '取消连接' : '连接模式'}
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />

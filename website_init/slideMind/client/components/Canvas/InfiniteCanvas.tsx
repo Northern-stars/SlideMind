@@ -39,6 +39,7 @@ export default function InfiniteCanvas() {
     setEditingMindMapNode,
     setMindMapData,
     applyMindMapLayout,
+    isDragToolActive,
   } = useCanvasStore()
 
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -185,6 +186,8 @@ export default function InfiniteCanvas() {
   }
 
   const handleMindMapDragStart = (nodeId: string, e: React.MouseEvent) => {
+    if (!isDragToolActive) return // Only allow drag when tool is active
+
     const node = mindMapData?.nodes.find((n) => n.id === nodeId)
     if (!node) return
 

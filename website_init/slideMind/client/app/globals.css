@@ -1154,6 +1154,97 @@ html, body {
   background: var(--primary-light);
 }
 
+/* ==================== MINDMAP TOOLTIP ==================== */
+
+.mindmap-tooltip {
+  position: absolute;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.mindmap-tooltip-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  transition: all 0.15s ease;
+}
+
+.mindmap-tooltip-btn:hover {
+  background: var(--primary-dark, #6d28d9);
+  transform: translateY(-1px);
+}
+
+.mindmap-tooltip-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ==================== MINDMAP EXPLANATION POPUP ==================== */
+
+.mindmap-explanation-popup {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 12px;
+  width: 280px;
+  background: var(--surface);
+  border: 2px solid var(--primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xl);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.mindmap-explanation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--primary-light);
+  border-bottom: 1px solid var(--border);
+}
+
+.mindmap-explanation-term {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--primary);
+}
+
+.mindmap-explanation-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+
+.mindmap-explanation-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.mindmap-explanation-content {
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
 /* ==================== MINDMAP EDGE ==================== */
 
 .mindmap-edge {

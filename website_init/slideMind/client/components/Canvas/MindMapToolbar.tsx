@@ -14,6 +14,8 @@ export default function MindMapToolbar() {
     selectedMindMapNodeId,
     selectMindMapNode,
     applyMindMapLayout,
+    isDragToolActive,
+    setDragToolActive,
   } = useCanvasStore()
 
   const [isLoading, setIsLoading] = useState(false)
@@ -198,6 +200,16 @@ export default function MindMapToolbar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
             </svg>
             自动布局
+          </button>
+
+          <button
+            onClick={() => setDragToolActive(!isDragToolActive)}
+            className={`mindmap-toolbar-btn ${isDragToolActive ? 'active' : ''}`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+            拖拽工具
           </button>
 
           <button

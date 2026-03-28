@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from services.chat_service import chat_completion, get_history, clear_history, add_context
+from api_calling import api_access
 
 chat_bp = Blueprint('chat', __name__)
 
@@ -61,3 +62,22 @@ def delete_chat_history():
     user_id = request.args.get('userId', 'default')
     clear_history(user_id)
     return jsonify({'status': 'ok'})
+
+
+@chat_bp.route('/explain', methods=['POST'])
+def explain_term():
+    """Explain a selected term"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No request data'}), 400
+
+    term = data.get('term', '').strip()
+    if not term:
+        return jsonify({'error': 'Empty term'}), 400
+
+    try:
+        api = api_access()
+        explanation = api.explain_term(term)
+        return jsonify({'term': term, 'explanation': explanation})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
