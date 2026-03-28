@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { useCanvasStore, Slide, Concept } from '@/lib/canvas-store'
+import { useCanvasStore, Slide, Concept, ChatMessage } from '@/lib/canvas-store'
 
 export default function SlideUploader() {
-  const { addSlide, updateSlideSummary, addCard } = useCanvasStore()
+  const { addSlide, updateSlideSummary, addCard, setLastAiMessage } = useCanvasStore()
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -18,7 +18,7 @@ export default function SlideUploader() {
 
     try {
       const slideId = `slide-${Date.now()}`
-      
+
       const slide: Slide = {
         id: slideId,
         filename: file.name,
@@ -48,32 +48,57 @@ export default function SlideUploader() {
 
       if (response.ok) {
         const result = await response.json()
-        
+        console.log('Upload result:', result)
+
         // Wait for async processing
         await new Promise(resolve => setTimeout(resolve, 1500))
-        
+
         setProgress(95)
 
-        // Fetch processed result
-        const slideResponse = await fetch(`http://localhost:3001/api/slides/${result.slideId}`)
-        if (slideResponse.ok) {
-          const processedSlide = await slideResponse.json()
-          
-          if (processedSlide.summary && processedSlide.concepts?.length > 0) {
-            updateSlideSummary(slideId, processedSlide.summary, processedSlide.concepts)
-            setCurrentSlide({ ...processedSlide, id: slideId })
-          } else {
-            // Fallback
-            const fallbackConcepts: Concept[] = [
-              { id: `${slideId}-1`, slideId, title: '概念 1', description: '点击添加' },
-              { id: `${slideId}-2`, slideId, title: '概念 2', description: '点击添加' },
-            ]
-            updateSlideSummary(slideId, '内容已解析，请选择概念添加', fallbackConcepts)
-            setCurrentSlide({ ...slide, concepts: fallbackConcepts, summary: '内容已解析，请选择概念添加' })
+        // Use result.id (not result.slideId)
+        const processedSlide = result
+
+        if (processedSlide.summary) {
+          updateSlideSummary(slideId, processedSlide.summary, processedSlide.concepts || [])
+          setCurrentSlide({ ...processedSlide, id: slideId })
+
+          // Build analysis content
+          const analysisContent = `文件 "${file.name}" 分析完成！\n\n总结：${processedSlide.summary}\n\n提取的概念：\n${
+            processedSlide.concepts?.map((c: Concept, i: number) => `${i + 1}. ${c.title}`).join('\n') || '无'
+          }`
+
+          // Set AI message to display in ChatPanel
+          const aiMessage: ChatMessage = {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: analysisContent,
+            timestamp: new Date(),
           }
+          setLastAiMessage(aiMessage)
+
+          // Send to backend as context for future conversation
+          await fetch('http://localhost:3001/api/chat/context', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: 'default',
+              role: 'assistant',
+              content: analysisContent,
+            }),
+          })
+        } else if (processedSlide.concepts?.length > 0) {
+          updateSlideSummary(slideId, processedSlide.summary, processedSlide.concepts)
+        } else {
+          // Fallback
+          const fallbackConcepts: Concept[] = [
+            { id: `${slideId}-1`, slideId, title: '概念 1', description: '点击添加' },
+            { id: `${slideId}-2`, slideId, title: '概念 2', description: '点击添加' },
+          ]
+          updateSlideSummary(slideId, '内容已解析，请选择概念添加', fallbackConcepts)
+          setCurrentSlide({ ...slide, concepts: fallbackConcepts, summary: '内容已解析，请选择概念添加' })
         }
       }
-      
+
       setProgress(100)
       setTimeout(() => setIsUploading(false), 500)
     } catch (error) {
@@ -152,6 +177,30 @@ export default function SlideUploader() {
       {/* Concepts Selection - Only show after upload */}
       {currentSlide && currentSlide.concepts.length > 0 && (
         <div className="animate-fadeIn">
+          {/* Header with close button */}
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+              📚 提取的概念 ({currentSlide.concepts.length})
+            </h4>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAddAllConcepts}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90 transition-colors"
+              >
+                添加全部
+              </button>
+              <button
+                onClick={() => setCurrentSlide(null)}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-[var(--bg-tertiary)] hover:bg-[var(--border)] transition-colors"
+                title="关闭"
+              >
+                <svg className="w-3.5 h-3.5 text-[var(--text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
           {/* Summary */}
           {currentSlide.summary && (
             <div className="card mb-4">
@@ -163,18 +212,6 @@ export default function SlideUploader() {
 
           {/* Concept list */}
           <div className="mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold text-[var(--text-primary)]">
-                📚 提取的概念 ({currentSlide.concepts.length})
-              </h4>
-              <button
-                onClick={handleAddAllConcepts}
-                className="btn-gradient btn-sm"
-              >
-                添加全部
-              </button>
-            </div>
-
             <div className="space-y-2">
               {currentSlide.concepts.map((concept, index) => (
                 <button

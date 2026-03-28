@@ -32,47 +32,58 @@ export interface Slide {
   uploadedAt: Date
 }
 
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp: Date
+}
+
 interface CanvasState {
   // Canvas elements
   cards: CanvasCard[]
   connections: CanvasConnection[]
-  
+
   // Selection
   selectedCardIds: string[]
   selectedConnectionIds: string[]
-  
+
   // Interaction mode
   isConnecting: boolean
   connectionStart: string | null
-  
+
   // Viewport
   zoom: number
   panOffset: { x: number; y: number }
   showGrid: boolean
-  
+
   // Slides
   slides: Slide[]
   activeSlideId: string | null
-  
+
+  // Chat
+  lastAiMessage: ChatMessage | null
+  setLastAiMessage: (message: ChatMessage | null) => void
+
   // Actions
   addCard: (concept: Concept, position?: { x: number; y: number }) => void
   removeCard: (cardId: string) => void
   updateCardPosition: (cardId: string, position: { x: number; y: number }) => void
   updateCardDescription: (cardId: string, description: string) => void
-  
+
   addConnection: (fromCardId: string, toCardId: string, type?: 'solid' | 'dashed') => void
   removeConnection: (connectionId: string) => void
-  
+
   selectCard: (cardId: string, multi?: boolean) => void
   deselectAll: () => void
-  
+
   startConnection: (cardId: string) => void
   cancelConnection: () => void
-  
+
   setZoom: (zoom: number) => void
   setPanOffset: (offset: { x: number; y: number }) => void
   toggleGrid: () => void
-  
+
   addSlide: (slide: Slide) => void
   setActiveSlide: (slideId: string) => void
   updateSlideSummary: (slideId: string, summary: string, concepts: Concept[]) => void
@@ -90,6 +101,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   showGrid: true,
   slides: [],
   activeSlideId: null,
+  lastAiMessage: null,
 
   addCard: (concept, position) => {
     const id = `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -211,5 +223,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         s.id === slideId ? { ...s, summary, concepts } : s
       ),
     }))
+  },
+
+  setLastAiMessage: (message) => {
+    set({ lastAiMessage: message })
   },
 }))

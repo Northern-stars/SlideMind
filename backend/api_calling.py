@@ -413,12 +413,12 @@ class api_access:
         if not ocr_text.strip():
             return {
                 "ocr_text": "",
-                "response": "图片中未提取到文字内容"
+                "response": "No text content found in the image"
             }
 
         # Send to MiniMax
         messages = [
-            {"role": "user", "content": f"{prompt}\n\n图片中的文字内容：\n{ocr_text}"}
+            {"role": "user", "content": f"{prompt}\n\nImage text content:\n{ocr_text}"}
         ]
         response = self._call_minimax(messages, max_tokens=4096)
 
@@ -444,12 +444,12 @@ class api_access:
             return {
                 "pages": [],
                 "full_text": "",
-                "summary": "PDF中未提取到文字内容"
+                "summary": "PDF file doesn't contain extractable text content"
             }
 
         # Send to MiniMax for summary
         messages = [
-            {"role": "user", "content": f"{prompt}\n\nPDF文字内容：\n{text_content}"}
+            {"role": "user", "content": f"{prompt}\n\nPDF content: \n{text_content}"}
         ]
         summary = self._call_minimax(messages, max_tokens=4096)
 
@@ -481,7 +481,7 @@ class api_access:
             })
 
         # Combine all OCR text
-        full_text = "\n\n".join([f"第{r['slide']}页：\n{r['ocr_text']}" for r in results])
+        full_text = "\n\n".join([f"Slide {r['slide']}: \n{r['ocr_text']}" for r in results])
 
         # Send to MiniMax for summary
         messages = [

@@ -1,11 +1,10 @@
 import os
 import uuid
 from datetime import datetime
-from api_calling import pptx_to_images
-from api_calling import api_access
+from api_calling import pptx_to_images, api_access
 
 # API configuration
-API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+API_KEY = os.environ.get('MINIMAX_API_KEY', '')
 api = api_access(key=API_KEY) if API_KEY else None
 
 
@@ -21,6 +20,7 @@ def parse_slide_file(file_path, slide_id, filename):
         dict: Parse result
     """
     ext = os.path.splitext(filename)[1].lower()
+    print(f"Parsing file: {filename} with extension: {ext}")
 
     result = {
         'id': slide_id,
@@ -62,26 +62,72 @@ def parse_pptx(file_path, slide_id, filename):
     }
 
     try:
-        # Convert to images
-        images = pptx_to_images(file_path, dpi=300)
-
-        if not images:
-            result['status'] = 'ready'
-            result['content'] = 'No slides extracted'
-            return result
-
-        # Analyze each page with model
         if api:
-            analysis_results = []
-            for i, img in enumerate(images):
-                analysis_results.append(f"Slide {i+1}")
+            # Use API to analyze PPTX with OCR
+            analysis = api.analyze_pptx_with_ocr(file_path, prompt="请总结这个PPT的内容，提取关键概念")
 
-            result['content'] = '\n'.join(analysis_results)
-            result['summary'] = f'This PPTX contains {len(images)} slides'
+            result['content'] = analysis.get('full_text', '')
+            result['summary'] = analysis.get('summary', '')
 
+            # Extract concepts from summary (simple parsing)
+            if result['summary']:
+                # Simple concept extraction - split by common delimiters
+                lines = result['summary'].split('\n')
+                for i, line in enumerate(lines[:5]):  # First 5 lines as concepts
+                    if line.strip():
+                        result['concepts'].append({
+                            'id': f'{slide_id}-concept-{i}',
+                            'slideId': slide_id,
+                            'title': line.strip()[:50],
+                            'description': line.strip()
+                        })
         else:
-            result['content'] = f'This PPTX contains {len(images)} slides'
-            result['summary'] = 'API not configured, only slide count available'
+            result['content'] = 'API not configured'
+            result['summary'] = 'Please configure MINIMAX_API_KEY'
+
+        result['status'] = 'ready'
+
+    except Exception as e:
+        result['status'] = 'error'
+        result['error'] = str(e)
+    print(f"Finished parsing file: {filename}, status: {result['status']}")
+    return result
+
+
+def parse_pdf(file_path, slide_id, filename):
+    """Parse PDF file"""
+    result = {
+        'id': slide_id,
+        'filename': filename,
+        'status': 'processing',
+        'content': '',
+        'summary': '',
+        'concepts': [],
+        'createdAt': datetime.now().isoformat()
+    }
+
+    try:
+        if api:
+            # Use API to analyze PDF with OCR
+            analysis = api.analyze_pdf_with_ocr(file_path, prompt="请总结这个PDF的内容，提取关键概念")
+
+            result['content'] = analysis.get('full_text', '')
+            result['summary'] = analysis.get('summary', '')
+
+            # Extract concepts from summary (simple parsing)
+            if result['summary']:
+                lines = result['summary'].split('\n')
+                for i, line in enumerate(lines[:5]):
+                    if line.strip():
+                        result['concepts'].append({
+                            'id': f'{slide_id}-concept-{i}',
+                            'slideId': slide_id,
+                            'title': line.strip()[:50],
+                            'description': line.strip()
+                        })
+        else:
+            result['content'] = 'API not configured'
+            result['summary'] = 'Please configure MINIMAX_API_KEY'
 
         result['status'] = 'ready'
 
@@ -92,31 +138,35 @@ def parse_pptx(file_path, slide_id, filename):
     return result
 
 
-def parse_pdf(file_path, slide_id, filename):
-    """Parse PDF file"""
-    result = {
-        'id': slide_id,
-        'filename': filename,
-        'status': 'ready',
-        'content': 'PDF parsing not implemented',
-        'summary': 'PDF parsing not implemented',
-        'concepts': [],
-        'createdAt': datetime.now().isoformat()
-    }
-    return result
-
-
 def parse_image(file_path, slide_id, filename):
     """Parse image file"""
     result = {
         'id': slide_id,
         'filename': filename,
-        'status': 'ready',
-        'content': 'Image parsing not implemented',
-        'summary': 'Image parsing not implemented',
+        'status': 'processing',
+        'content': '',
+        'summary': '',
         'concepts': [],
         'createdAt': datetime.now().isoformat()
     }
+
+    try:
+        if api:
+            # Use API to analyze image with OCR
+            analysis = api.analyze_image_with_ocr(file_path, prompt="请描述这张图片的内容")
+
+            result['content'] = analysis.get('ocr_text', '')
+            result['summary'] = analysis.get('response', '')
+        else:
+            result['content'] = 'API not configured'
+            result['summary'] = 'Please configure MINIMAX_API_KEY'
+
+        result['status'] = 'ready'
+
+    except Exception as e:
+        result['status'] = 'error'
+        result['error'] = str(e)
+
     return result
 
 

@@ -2,8 +2,8 @@ import os
 from collections import defaultdict
 from api_calling import api_access
 
-# API configuration
-API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+# API configuration - use MINIMAX_API_KEY
+API_KEY = os.environ.get('MINIMAX_API_KEY', '')
 api = api_access(key=API_KEY) if API_KEY else None
 
 # In-memory chat history storage
@@ -76,7 +76,7 @@ def generate_demo_response(message, selected_cards):
     if selected_cards and len(selected_cards) > 0:
         return f'I notice you selected {len(selected_cards)} concepts. Would you like to know how they are related?'
 
-    return f'Your question is: {message}\n\nThis is a simulated response. Please configure ANTHROPIC_API_KEY to enable real AI responses.'
+    return f'Your question is: {message}\n\nThis is a simulated response. Please configure MINIMAX_API_KEY to enable real AI responses.'
 
 
 def get_history(user_id='default'):
@@ -87,3 +87,17 @@ def get_history(user_id='default'):
 def clear_history(user_id='default'):
     """Clear chat history"""
     chat_history_store[user_id] = []
+
+
+def add_context(user_id='default', role='assistant', content=''):
+    """Add context message to chat history (e.g., file analysis result)
+
+    Args:
+        user_id: User ID
+        role: Message role ('user' or 'assistant')
+        content: Message content
+    """
+    chat_history_store[user_id].append({
+        'role': role,
+        'content': content
+    })

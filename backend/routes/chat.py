@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from services.chat_service import chat_completion, get_history, clear_history
+from services.chat_service import chat_completion, get_history, clear_history, add_context
 
 chat_bp = Blueprint('chat', __name__)
 
@@ -27,6 +27,24 @@ def chat():
     )
 
     return jsonify(result)
+
+
+@chat_bp.route('/context', methods=['POST'])
+def add_context_message():
+    """Add context message to chat history (e.g., file analysis result)"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No request data'}), 400
+
+    user_id = data.get('userId', 'default')
+    role = data.get('role', 'assistant')
+    content = data.get('content', '')
+
+    if not content:
+        return jsonify({'error': 'Empty content'}), 400
+
+    add_context(user_id, role, content)
+    return jsonify({'status': 'ok'})
 
 
 @chat_bp.route('/history', methods=['GET'])

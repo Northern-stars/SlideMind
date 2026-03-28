@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useCanvasStore, Concept } from '@/lib/canvas-store'
+import { useCanvasStore, Concept, ChatMessage } from '@/lib/canvas-store'
 
 interface Message {
   id: string
@@ -11,7 +11,7 @@ interface Message {
 }
 
 export default function ChatPanel() {
-  const { slides, activeSlideId, addCard, selectedCardIds, cards } = useCanvasStore()
+  const { slides, activeSlideId, addCard, selectedCardIds, cards, lastAiMessage, setLastAiMessage } = useCanvasStore()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -23,6 +23,14 @@ export default function ChatPanel() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Listen for AI messages from other components (e.g., SlideUploader)
+  useEffect(() => {
+    if (lastAiMessage) {
+      setMessages((prev) => [...prev, lastAiMessage as Message])
+      setLastAiMessage(null)  // Clear after displaying
+    }
+  }, [lastAiMessage, setLastAiMessage])
 
   const activeSlide = slides.find((s) => s.id === activeSlideId)
   const selectedCards = cards.filter((c) => selectedCardIds.includes(c.id))
@@ -46,23 +54,24 @@ export default function ChatPanel() {
     setIsLoading(true)
 
     try {
-      // Simulate AI response
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Send message to backend
+      const res = await fetch('http://localhost:3001/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: input,
+          userId: 'default',
+          slideId: activeSlideId,
+          selectedCards: selectedCards.map(c => c.id),
+        }),
+      })
 
-      let responseContent = ''
-      
-      if (selectedCards.length > 0) {
-        responseContent = `我注意到你选中了 ${selectedCards.length} 个概念。你可以继续问我问题，或者在画布上尝试连接这些概念。选中概念后，我可以帮你：\n\n• 深入解释某个概念的含义\n• 找出这些概念之间的关联\n• 建议你接下来可以添加什么概念`
-      } else if (activeSlide) {
-        responseContent = `我正在分析"${activeSlide.filename}"。你可以：\n\n• 点击右侧的概念卡片，添加到画布\n• 按住 Shift 连接两个概念\n• 继续和我对话，探讨这些概念`
-      } else {
-        responseContent = '欢迎使用 SlideMind！上传一个 Slide 或导入概念，开始构建你的知识网络吧。'
-      }
+      const data = await res.json()
 
       const response: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: responseContent,
+        content: data.response || '抱歉，发生了错误。',
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, response])

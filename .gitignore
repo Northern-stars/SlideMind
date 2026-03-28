@@ -1,2 +1,5 @@
 .DS_Store
 backend/uploads/
+website_init/slideMind/client/.next/
+website_init/slideMind/client/node_modules/
+website_init/slideMind/server/node_modules/
