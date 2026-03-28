@@ -19,7 +19,10 @@ interface Props {
   onPositionChange: (position: { x: number; y: number }) => void
   onMouseUp?: () => void
   onDragStart: (e: React.MouseEvent) => void
+  onResize?: (size: { width: number; height: number }) => void
 }
+
+type ResizeDirection = 'se' | 'sw' | 'ne' | 'nw' | 's' | 'n' | 'e' | 'w' | null
 
 export default function MindMapNode({
   node,
@@ -35,10 +38,15 @@ export default function MindMapNode({
   onPositionChange,
   onMouseUp,
   onDragStart,
+  onResize,
 }: Props) {
   const { isDragToolActive, setSelectedTerm } = useCanvasStore()
 
   const [editText, setEditText] = useState(node.text)
+  const [isResizing, setIsResizing] = useState(false)
+  const isResizingRef = useRef(false)  // Use ref to track resize state immediately
+  const [resizeDirection, setResizeDirection] = useState<ResizeDirection>(null)
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
   const nodeRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -83,7 +91,7 @@ export default function MindMapNode({
   }
 
   const handleMouseUp = (e: React.MouseEvent) => {
-    if (isDragToolActive) {
+    if (isDragToolActive || isResizingRef.current) {
       onMouseUp?.()
       return
     }
@@ -91,6 +99,8 @@ export default function MindMapNode({
     const selection = window.getSelection()
     const text = selection?.toString().trim()
     if (!text || text.length === 0) {
+      // If already selected, deselect by calling onSelect with null
+      // The parent will handle deselecting all nodes first
       onSelect(e)
       onMouseUp?.()
     }
@@ -116,6 +126,63 @@ export default function MindMapNode({
     }
   }
 
+  // Resize handlers
+  const handleResizeStart = (e: React.MouseEvent, direction: ResizeDirection) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (!isSelected || isEditing) return
+    // Double check selection state immediately before starting
+    if (!isSelected) return
+    isResizingRef.current = true  // Set ref immediately
+    setIsResizing(true)
+    setResizeDirection(direction)
+    setResizeStart({
+      x: e.clientX,
+      y: e.clientY,
+      width: node.width || 180,
+      height: node.height || 60,
+    })
+  }
+
+  useEffect(() => {
+    if (!isResizing) return
+
+    const handleResizeMove = (e: MouseEvent) => {
+      // If node is no longer selected, cancel resize
+      if (!isSelected) {
+        isResizingRef.current = false
+        setIsResizing(false)
+        setResizeDirection(null)
+        return
+      }
+
+      const dx = e.clientX - resizeStart.x
+      const dy = e.clientY - resizeStart.y
+      let newWidth = resizeStart.width
+      let newHeight = resizeStart.height
+
+      if (resizeDirection?.includes('e')) newWidth = Math.max(100, resizeStart.width + dx)
+      if (resizeDirection?.includes('w')) newWidth = Math.max(100, resizeStart.width - dx)
+      if (resizeDirection?.includes('s')) newHeight = Math.max(40, resizeStart.height + dy)
+      if (resizeDirection?.includes('n')) newHeight = Math.max(40, resizeStart.height - dy)
+
+      onResize?.({ width: newWidth, height: newHeight })
+    }
+
+    const handleResizeEnd = () => {
+      isResizingRef.current = false  // Set ref to false before state update
+      setIsResizing(false)
+      setResizeDirection(null)
+    }
+
+    document.addEventListener('mousemove', handleResizeMove)
+    document.addEventListener('mouseup', handleResizeEnd)
+    return () => {
+      document.removeEventListener('mousemove', handleResizeMove)
+      document.removeEventListener('mouseup', handleResizeEnd)
+    }
+  }, [isResizing, resizeDirection, resizeStart, node.width, node.height, onResize, isSelected])
+
   return (
     <div
       ref={nodeRef}
@@ -123,6 +190,8 @@ export default function MindMapNode({
       style={{
         left: node.position.x,
         top: node.position.y,
+        width: node.width || 'auto',
+        height: node.height || 'auto',
         '--node-color': node.color || '#000000',
       } as React.CSSProperties}
       onMouseDown={handleMouseDown}
@@ -138,11 +207,26 @@ export default function MindMapNode({
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           onClick={(e) => e.stopPropagation()}
+          style={{ width: '100%', height: '100%' }}
         />
       ) : (
         <div className="mindmap-node-content" ref={contentRef}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{node.text}</ReactMarkdown>
         </div>
+      )}
+
+      {/* Resize handles */}
+      {isSelected && !isEditing && (
+        <>
+          <div className="resize-handle resize-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
+          <div className="resize-handle resize-sw" onMouseDown={(e) => handleResizeStart(e, 'sw')} />
+          <div className="resize-handle resize-ne" onMouseDown={(e) => handleResizeStart(e, 'ne')} />
+          <div className="resize-handle resize-nw" onMouseDown={(e) => handleResizeStart(e, 'nw')} />
+          <div className="resize-handle resize-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
+          <div className="resize-handle resize-w" onMouseDown={(e) => handleResizeStart(e, 'w')} />
+          <div className="resize-handle resize-s" onMouseDown={(e) => handleResizeStart(e, 's')} />
+          <div className="resize-handle resize-n" onMouseDown={(e) => handleResizeStart(e, 'n')} />
+        </>
       )}
 
       {isSelected && !isEditing && (

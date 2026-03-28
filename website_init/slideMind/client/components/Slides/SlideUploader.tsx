@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { useCanvasStore, Slide, Concept, ChatMessage } from '@/lib/canvas-store'
 
 export default function SlideUploader() {
-  const { addSlide, updateSlideSummary, addCard, setLastAiMessage } = useCanvasStore()
+  const { addSlide, updateSlideSummary, addCard, setLastAiMessage, mindMapMode, mindMapData, setMindMapData, addMindMapNode } = useCanvasStore()
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -121,26 +121,50 @@ export default function SlideUploader() {
   }
 
   const handleConceptClick = (concept: Concept) => {
-    addCard(concept)
+    if (mindMapMode && mindMapData) {
+      const mindMapNode = {
+        id: `mindmap-node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        text: `## ${concept.title}\n\n${concept.description}`,
+        position: {
+          x: 200 + Math.random() * 400,
+          y: 200 + Math.random() * 200,
+        },
+      }
+      addMindMapNode(mindMapNode)
+    } else {
+      addCard(concept)
+    }
   }
 
   const handleAddAllConcepts = () => {
-    if (currentSlide?.concepts) {
-      currentSlide.concepts.forEach(concept => {
-        addCard(concept)
-      })
-    }
+    if (!currentSlide?.concepts) return
+    currentSlide.concepts.forEach(concept => {
+      handleConceptClick(concept)
+    })
   }
 
   const handleAddSummaryCard = () => {
     if (!currentSlide) return
-    const summaryCardConcept: Concept = {
-      id: `summary-${Date.now()}`,
-      slideId: currentSlide.id,
-      title: `📄 ${currentSlide.filename || '文件摘要'}`,
-      description: currentSlide.summary || '暂无摘要内容',
+    const summaryContent = `## 📄 ${currentSlide.filename || '文件摘要'}\n\n${currentSlide.summary || '暂无摘要内容'}`
+    if (mindMapMode && mindMapData) {
+      const mindMapNode = {
+        id: `mindmap-node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        text: summaryContent,
+        position: {
+          x: 300 + Math.random() * 300,
+          y: 200 + Math.random() * 200,
+        },
+      }
+      addMindMapNode(mindMapNode)
+    } else {
+      const summaryCardConcept: Concept = {
+        id: `summary-${Date.now()}`,
+        slideId: currentSlide.id,
+        title: `📄 ${currentSlide.filename || '文件摘要'}`,
+        description: currentSlide.summary || '暂无摘要内容',
+      }
+      addCard(summaryCardConcept)
     }
-    addCard(summaryCardConcept)
   }
 
   return (

@@ -45,6 +45,8 @@ export interface MindMapNode {
   text: string
   position: { x: number; y: number }
   color?: string  // Border color for selected state
+  width?: number  // Node width for resize
+  height?: number  // Node height for resize
 }
 
 export interface MindMapEdge {

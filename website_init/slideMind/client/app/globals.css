@@ -1046,12 +1046,13 @@ html, body {
   border: 2px solid var(--border);
   border-radius: 12px;
   padding: 14px 18px;
-  min-width: 180px;
-  max-width: 280px;
+  min-width: 100px;
+  min-height: 40px;
   cursor: grab;
   user-select: none;
   box-shadow: var(--shadow-md);
   transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  overflow: visible;
 }
 
 .mindmap-node:hover {
@@ -1073,6 +1074,21 @@ html, body {
   box-shadow: var(--shadow-xl);
   z-index: 1000;
 }
+
+/* Resize handles */
+.resize-handle {
+  position: absolute;
+  z-index: 10;
+}
+
+.resize-se { right: -4px; bottom: -4px; width: 10px; height: 10px; cursor: se-resize; background: var(--primary); border-radius: 2px; }
+.resize-sw { left: -4px; bottom: -4px; width: 10px; height: 10px; cursor: sw-resize; background: var(--primary); border-radius: 2px; }
+.resize-ne { right: -4px; top: -4px; width: 10px; height: 10px; cursor: ne-resize; background: var(--primary); border-radius: 2px; }
+.resize-nw { left: -4px; top: -4px; width: 10px; height: 10px; cursor: nw-resize; background: var(--primary); border-radius: 2px; }
+.resize-e { right: -4px; top: 50%; transform: translateY(-50%); width: 6px; height: 24px; cursor: e-resize; background: var(--primary); border-radius: 2px; }
+.resize-w { left: -4px; top: 50%; transform: translateY(-50%); width: 6px; height: 24px; cursor: w-resize; background: var(--primary); border-radius: 2px; }
+.resize-s { bottom: -4px; left: 50%; transform: translateX(-50%); width: 24px; height: 6px; cursor: s-resize; background: var(--primary); border-radius: 2px; }
+.resize-n { top: -4px; left: 50%; transform: translateX(-50%); width: 24px; height: 6px; cursor: n-resize; background: var(--primary); border-radius: 2px; }
 
 .mindmap-node-content {
   font-size: 14px;

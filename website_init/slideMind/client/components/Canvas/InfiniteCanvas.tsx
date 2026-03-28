@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useCanvasStore, CanvasCard, CanvasConnection, MindMapEdge, MindMapNode, MindMapData } from '@/lib/canvas-store'
 import MindMapNodeComponent from './MindMapNode'
 import MindMapFloatingToolbar from './MindMapFloatingToolbar'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export default function InfiniteCanvas() {
   const {
@@ -200,7 +202,12 @@ export default function InfiniteCanvas() {
       return
     }
 
-    selectMindMapNode(nodeId)
+    // Toggle: if already selected, deselect; otherwise select this node
+    if (selectedMindMapNodeId === nodeId) {
+      selectMindMapNode(null)
+    } else {
+      selectMindMapNode(nodeId)
+    }
   }
 
   const handleMindMapDragStart = (nodeId: string, e: React.MouseEvent) => {
@@ -233,6 +240,10 @@ export default function InfiniteCanvas() {
 
   const handleMindMapNodePositionChange = (nodeId: string, position: { x: number; y: number }) => {
     updateMindMapNode(nodeId, { position })
+  }
+
+  const handleMindMapNodeResize = (nodeId: string, size: { width: number; height: number }) => {
+    updateMindMapNode(nodeId, { width: size.width, height: size.height })
   }
 
   const handleMindMapNodeTextUpdate = (nodeId: string, text: string) => {
@@ -525,6 +536,7 @@ export default function InfiniteCanvas() {
             onUpdateText={(text) => handleMindMapNodeTextUpdate(node.id, text)}
             onUpdateColor={(color) => handleMindMapNodeColorUpdate(node.id, color)}
             onPositionChange={(pos) => handleMindMapNodePositionChange(node.id, pos)}
+            onResize={(size) => handleMindMapNodeResize(node.id, size)}
             onMouseUp={() => handleMindMapNodeMouseUp(node.id)}
             isDragging={draggingMindMapNode === node.id}
             dragOffset={mindMapDragOffset}
@@ -549,7 +561,9 @@ export default function InfiniteCanvas() {
           >
             <div className="card-title">{card.concept.title}</div>
             <p className="card-description">
-              {card.userEditedDescription || card.concept.description}
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {card.userEditedDescription || card.concept.description}
+              </ReactMarkdown>
             </p>
             {card.concept.slideId && (
               <div className="card-footer">

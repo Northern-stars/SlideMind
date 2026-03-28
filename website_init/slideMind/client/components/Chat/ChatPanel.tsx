@@ -135,9 +135,9 @@ export default function ChatPanel() {
           {/* Scrollable content */}
           <div className={`transition-all duration-200 ease-in-out ${conceptSummaryCollapsed ? 'max-h-0 opacity-0' : 'max-h-[250px]'} overflow-y-auto`}>
             {activeSlide.summary && (
-              <p className="text-sm text-[var(--text-secondary)] mb-4 leading-relaxed">
-                {activeSlide.summary}
-              </p>
+              <div className="text-sm text-[var(--text-secondary)] mb-4 leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{activeSlide.summary}</ReactMarkdown>
+              </div>
             )}
 
             {activeSlide.concepts.length > 0 && (
@@ -155,7 +155,7 @@ export default function ChatPanel() {
                     <span>{concept.title}</span>
                     <span className="add-hint">+ 添加</span>
                   </div>
-                  <p className="concept-item-desc">{concept.description}</p>
+                  <p className="concept-item-desc"><ReactMarkdown remarkPlugins={[remarkGfm]}>{concept.description}</ReactMarkdown></p>
                 </button>
               ))}
             </div>
