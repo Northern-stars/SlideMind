@@ -230,7 +230,15 @@ export default function MindMapNode({
       )}
 
       {isSelected && !isEditing && (
-        <div className="mindmap-node-actions">
+        <div
+          className="mindmap-node-actions"
+          onMouseDown={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
+        >
           <button
             className="mindmap-node-btn edit"
             onClick={(e) => {
