@@ -11,6 +11,7 @@ interface Props {
   onDeleteSelected: () => void
   onAutoLayout: () => void
   onExplain: () => void
+  onAssociate: (maxIter: number, maxWord: number) => void
 }
 
 export default function MindMapFloatingToolbar({
@@ -21,8 +22,12 @@ export default function MindMapFloatingToolbar({
   onDeleteSelected,
   onAutoLayout,
   onExplain,
+  onAssociate,
 }: Props) {
   const [isExplaining, setIsExplaining] = useState(false)
+  const [isAssociating, setIsAssociating] = useState(false)
+  const [maxIter, setMaxIter] = useState(2)
+  const [maxWord, setMaxWord] = useState(3)
   const { selectedMindMapNodeId, isDragToolActive, setDragToolActive, selectedTerm } = useCanvasStore()
 
   const handleExplain = async () => {
@@ -32,6 +37,16 @@ export default function MindMapFloatingToolbar({
       await onExplain()
     } finally {
       setIsExplaining(false)
+    }
+  }
+
+  const handleAssociate = async () => {
+    if (!selectedMindMapNodeId || isAssociating) return
+    setIsAssociating(true)
+    try {
+      await onAssociate(maxIter, maxWord)
+    } finally {
+      setIsAssociating(false)
     }
   }
 
@@ -92,10 +107,53 @@ export default function MindMapFloatingToolbar({
           </svg>
         ) : (
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M8 14h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M7 8h10a2 2 0 012 2v4a2 2 0 01-2 2H7a2 2 0 01-2-2v-4a2 2 0 012-2z" />
           </svg>
         )}
       </button>
+
+      <div className="mindmap-floating-divider" />
+
+      <div className="mindmap-associate-controls">
+        <div className="mindmap-associate-inputs">
+          <input
+            type="number"
+            min={1}
+            max={5}
+            value={maxIter}
+            onChange={(e) => setMaxIter(Math.max(1, Math.min(5, parseInt(e.target.value) || 1)))}
+            className="mindmap-associate-input"
+            title="迭代次数"
+          />
+          <span className="mindmap-associate-sep">×</span>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={maxWord}
+            onChange={(e) => setMaxWord(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+            className="mindmap-associate-input"
+            title="每步概念数"
+          />
+        </div>
+        <button
+          className="mindmap-floating-btn"
+          onClick={handleAssociate}
+          disabled={!selectedMindMapNodeId || isAssociating}
+          title={selectedMindMapNodeId ? '联想' : '先选中节点'}
+        >
+          {isAssociating ? (
+            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+          )}
+        </button>
+      </div>
 
       <div className="mindmap-floating-divider" />
 
