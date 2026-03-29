@@ -303,16 +303,18 @@ export default function InfiniteCanvas() {
 
   // Explain selected term - creates a new node with explanation
   const handleExplain = async () => {
-    const { mindMapData: currentMindMap, selectedTerm: currentTerm, selectedTermNodeId: currentNodeId, addMindMapNode, addMindMapEdge, setSelectedTerm } = useCanvasStore.getState()
+    // Use closure variables (captured at component render time)
+    const termToExplain = selectedTerm
+    const nodeIdToExplain = selectedTermNodeId
+    const sourceNode = mindMapData?.nodes.find((n) => n.id === nodeIdToExplain)
 
-    if (!currentTerm || !currentNodeId || !currentMindMap) {
-      console.log('[解释] 早期返回: term=', currentTerm, 'nodeId=', currentNodeId, 'mindMapData=', !!currentMindMap)
+    if (!termToExplain || !nodeIdToExplain || !mindMapData) {
+      console.log('[解释] 早期返回: term=', termToExplain, 'nodeId=', nodeIdToExplain, 'mindMapData=', !!mindMapData)
       return
     }
 
-    const sourceNode = currentMindMap.nodes.find((n) => n.id === currentNodeId)
     if (!sourceNode) {
-      console.log('[解释] 未找到源节点: nodeId=', currentNodeId)
+      console.log('[解释] 未找到源节点: nodeId=', nodeIdToExplain)
       return
     }
 
@@ -320,14 +322,21 @@ export default function InfiniteCanvas() {
       const res = await fetch('http://localhost:3001/api/chat/explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: currentTerm }),
+        body: JSON.stringify({ term: termToExplain }),
       })
       const data = await res.json()
+      console.log('[解释] API原始返回:', JSON.stringify(data))
+      console.log('[解释] data.explanation =', data.explanation, '类型:', typeof data.explanation)
 
-      if (data.explanation) {
-        // Re-check state after async operation
-        const { mindMapData: freshMindMap } = useCanvasStore.getState()
-        if (!freshMindMap) {
+      if (data.error) {
+        console.log('[解释] API错误:', data.error)
+        return
+      }
+
+      if (data.explanation && data.explanation.trim()) {
+        // Get fresh state for adding node
+        const { mindMapData: currentMindMap, addMindMapNode, addMindMapEdge, setSelectedTerm } = useCanvasStore.getState()
+        if (!currentMindMap) {
           console.log('[解释] 异步操作后mindMapData为空')
           return
         }
@@ -336,7 +345,7 @@ export default function InfiniteCanvas() {
         const newNodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
         const newNode: MindMapNode = {
           id: newNodeId,
-          text: `**${currentTerm}**\n\n${data.explanation}`,
+          text: `**${termToExplain}**\n\n${data.explanation}`,
           position: {
             x: sourceNode.position.x + 220,
             y: sourceNode.position.y + Math.random() * 100 - 50,
@@ -360,7 +369,7 @@ export default function InfiniteCanvas() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             role: 'assistant',
-            content: `用户选中了"${currentTerm}"，以下是解释：\n\n${data.explanation}`,
+            content: `用户选中了"${termToExplain}"，以下是解释：\n\n${data.explanation}`,
           }),
         })
 

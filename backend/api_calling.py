@@ -1,5 +1,6 @@
 import io
 import os
+import json
 import base64
 import requests
 from PIL import Image
@@ -276,7 +277,14 @@ class api_access:
         response.raise_for_status()
 
         data = response.json()
-        return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        print(f"[_call_minimax] API response: {json.dumps(data, ensure_ascii=False)[:500]}")
+        message = data.get("choices", [{}])[0].get("message", {})
+        content = message.get("content", "")
+        # Fallback to reasoning_content if content is empty
+        if not content and message.get("reasoning_content"):
+            content = message.get("reasoning_content", "")
+        print(f"[_call_minimax] extracted content: '{content[:200] if content else 'empty'}'")
+        return content
 
     def upload_file(self, file_path, purpose="file-extract"):
         """Upload file to MiniMax API via MCP
@@ -537,10 +545,12 @@ class api_access:
             str: Explanation of the term
         """
         print(f"Explaining term: {term}")
-        
-        prompt = f"Briefly explain the following term or concept in one paragraph:\n\n{term}, limit content to 100 words."
+
+        prompt = f"用一句话简要解释以下概念：{term}"
 
         messages = [
             {"role": "user", "content": prompt}
         ]
-        return self._call_minimax(messages, max_tokens=1024)
+        result = self._call_minimax(messages, max_tokens=512)
+        print(f"[explain_term] result length: {len(result) if result else 0}, content: {result[:100] if result else 'empty'}")
+        return result

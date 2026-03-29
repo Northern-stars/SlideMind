@@ -306,7 +306,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setMindMapMode: (enabled) => set({ mindMapMode: enabled }),
 
   setMindMapData: (data) => set({
-    mindMapData: data ? { ...data, nodes: data.nodes || [], edges: data.edges || [] } : null
+    mindMapData: data ? { ...data, nodes: data.nodes || [], edges: data.edges || [] } : null,
+    // Reset selection state when loading a new mindmap
+    selectedMindMapNodeId: null,
+    editingMindMapNodeId: null,
+    isMindMapEditing: false,
+    selectedTerm: null,
+    selectedTermNodeId: null,
   }),
 
   addMindMapNode: (node) => {
