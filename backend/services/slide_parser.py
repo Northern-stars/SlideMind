@@ -139,7 +139,7 @@ def parse_pdf(file_path, slide_id, filename):
 
 
 def parse_image(file_path, slide_id, filename):
-    """Parse image file"""
+    """Parse image file - extract text via OCR and summarize with LLM"""
     result = {
         'id': slide_id,
         'filename': filename,
@@ -152,11 +152,23 @@ def parse_image(file_path, slide_id, filename):
 
     try:
         if api:
-            # Use API to analyze image with OCR
-            analysis = api.analyze_image_with_ocr(file_path, prompt="请描述这张图片的内容")
+            # Use API to extract OCR text and summarize with LLM
+            analysis = api.analyze_image_with_llm(file_path, prompt="请总结这张图片的内容，提取关键概念")
 
-            result['content'] = analysis.get('ocr_text', '')
-            result['summary'] = analysis.get('response', '')
+            result['content'] = analysis.get('full_text', '')
+            result['summary'] = analysis.get('summary', '')
+
+            # Extract concepts from summary (simple parsing)
+            if result['summary']:
+                lines = result['summary'].split('\n')
+                for i, line in enumerate(lines[:5]):
+                    if line.strip():
+                        result['concepts'].append({
+                            'id': f'{slide_id}-concept-{i}',
+                            'slideId': slide_id,
+                            'title': line.strip()[:50],
+                            'description': line.strip()
+                        })
         else:
             result['content'] = 'API not configured'
             result['summary'] = 'Please configure MINIMAX_API_KEY'

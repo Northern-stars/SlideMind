@@ -397,7 +397,7 @@ class api_access:
         }
 
     def analyze_image_with_ocr(self, image_path, prompt="Describe the content of this image"):
-        """Analyze image using OCR + MiniMax
+        """Analyze image using OCR + MiniMax (legacy method)
 
         Args:
             image_path: Path to image file or PIL Image
@@ -425,6 +425,39 @@ class api_access:
         return {
             "ocr_text": ocr_text,
             "response": response
+        }
+
+    def analyze_image_with_llm(self, image_path, prompt="请总结这张图片的内容，提取关键概念"):
+        """Analyze image by extracting text via OCR, then summarize with LLM
+
+        Args:
+            image_path: Path to image file or PIL Image
+            prompt: Prompt for the model to summarize
+
+        Returns:
+            dict: full_text (OCR result), summary (LLM summary), ocr_text
+        """
+        # Extract text via OCR
+        ocr = get_ocr_processor()
+        ocr_text = ocr.extract_text(image_path)
+
+        if not ocr_text.strip():
+            return {
+                "ocr_text": "",
+                "full_text": "",
+                "summary": "图片中未提取到文字内容"
+            }
+
+        # Send OCR text to MiniMax for summary
+        messages = [
+            {"role": "user", "content": f"{prompt}\n\n图片文字内容:\n{ocr_text}"}
+        ]
+        summary = self._call_minimax(messages, max_tokens=4096)
+
+        return {
+            "ocr_text": ocr_text,
+            "full_text": ocr_text,
+            "summary": summary
         }
 
     def analyze_pdf_with_ocr(self, pdf_path, prompt="Summarize the content of this PDF"):
