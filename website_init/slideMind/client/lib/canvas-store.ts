@@ -19,6 +19,8 @@ export interface MindMapNode {
   conceptId?: string
   concept?: Concept
   userEditedDescription?: string
+  // Association level tracking (set when node is created via association)
+  level?: number
 }
 
 export interface CanvasConnection {

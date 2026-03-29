@@ -355,6 +355,106 @@ export default function InfiniteCanvas() {
     }
   }
 
+  // Associate selected node - generates related concepts and creates a new connected node
+  const handleAssociate = async (maxIter: number, maxWord: number) => {
+    if (!selectedMindMapNodeId || !mindMapData) return
+
+    const sourceNode = mindMapData.nodes.find((n) => n.id === selectedMindMapNodeId)
+    if (!sourceNode) return
+
+    // Extract title from node text (first line without markdown heading markers)
+    const nodeTitle = sourceNode.text.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '')
+
+    try {
+      // 1. 启动联想任务
+      const startResponse = await fetch('http://localhost:3001/api/mindmaps/associate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: nodeTitle,
+          nodeId: selectedMindMapNodeId,
+          max_iter: maxIter,
+          max_word: maxWord,
+          base_position: { x: sourceNode.position.x + 220, y: sourceNode.position.y }
+        }),
+      })
+
+      if (!startResponse.ok) {
+        throw new Error('启动联想任务失败')
+      }
+
+      const { task_id } = await startResponse.json()
+      console.log('[联想] 任务ID:', task_id)
+
+      // 2. 轮询获取结果
+      const processedNodeIds = new Set<string>()
+      const processedEdgeIds = new Set<string>()
+      let pollCount = 0
+      const maxPolls = 300
+
+      while (pollCount < maxPolls) {
+        await new Promise(resolve => setTimeout(resolve, 5000))
+
+        const pollResponse = await fetch(`http://localhost:3001/api/mindmaps/associate/poll/${task_id}`)
+        const pollData = await pollResponse.json()
+
+        // 处理新节点
+        for (const node of pollData.nodes || []) {
+          if (!processedNodeIds.has(node.id)) {
+            processedNodeIds.add(node.id)
+            // 如果有parent_id，先创建边
+            if (node.parent_id) {
+              addMindMapEdge({
+                id: `edge-${node.id}`,
+                from: node.parent_id,
+                to: node.id
+              })
+            }
+            // 添加节点（去掉parent_id）
+            const { parent_id, ...nodeData } = node
+            addMindMapNode(nodeData)
+          }
+        }
+
+        // 处理新边
+        for (const edge of pollData.edges || []) {
+          if (!processedEdgeIds.has(edge.id)) {
+            processedEdgeIds.add(edge.id)
+            addMindMapEdge(edge)
+          }
+        }
+
+        // 检查是否完成
+        if (pollData.done || pollData.status === 'completed') {
+          // 重置所有节点的level
+          const { mindMapData: currentData, updateMindMapNode } = useCanvasStore.getState()
+          if (currentData) {
+            currentData.nodes.forEach(node => {
+              if (node.level !== undefined && node.level > 0) {
+                updateMindMapNode(node.id, { level: 0 })
+              }
+            })
+          }
+          break
+        }
+
+        pollCount++
+      }
+
+      // Add to chat context
+      await fetch('http://localhost:3001/api/chat/context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: 'assistant',
+          content: `用户点击了"联想"，基于"${nodeTitle}"生成了相关概念`,
+        }),
+      })
+    } catch (error) {
+      console.error('Failed to associate:', error)
+    }
+  }
+
   // Get mindmap node center for connection lines
   const getMindMapNodeCenter = (nodeId: string) => {
     const node = mindMapData?.nodes.find((n) => n.id === nodeId)
@@ -558,6 +658,7 @@ export default function InfiniteCanvas() {
         onDeleteSelected={handleFloatingDeleteSelected}
         onAutoLayout={handleFloatingAutoLayout}
         onExplain={handleExplain}
+        onAssociate={handleAssociate}
       />
 
       {/* Empty state */}

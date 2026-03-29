@@ -1450,3 +1450,38 @@ html, body {
   background: var(--border);
   margin: 0 4px;
 }
+
+.mindmap-associate-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mindmap-associate-inputs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mindmap-associate-input {
+  width: 32px;
+  height: 28px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  text-align: center;
+}
+
+.mindmap-associate-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.mindmap-associate-sep {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  user-select: none;
+}

@@ -159,7 +159,8 @@ export default function MindMapToolbar() {
     setAssociateProgress('开始分析...')
 
     try {
-      const response = await fetch('http://localhost:3001/api/mindmaps/associate', {
+      // 1. 启动联想任务
+      const startResponse = await fetch('http://localhost:3001/api/mindmaps/associate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -170,55 +171,60 @@ export default function MindMapToolbar() {
         }),
       })
 
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error('无法读取响应')
+      if (!startResponse.ok) {
+        throw new Error('启动联想任务失败')
       }
 
-      const decoder = new TextDecoder()
-      let buffer = ''
+      const { task_id } = await startResponse.json()
+      console.log('[联想] 任务ID:', task_id)
+      setAssociateProgress('任务已启动，正在生成节点...')
 
-      // Use local accumulators to avoid stale state issues
+      // 2. 轮询获取结果
       const localNodes: MindMapNode[] = []
       const localEdges: MindMapEdge[] = []
+      let lastNodeCount = 0
+      let pollCount = 0
+      const maxPolls = 300  // 最多轮询300次（约5分钟）
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+      while (pollCount < maxPolls) {
+        await new Promise(resolve => setTimeout(resolve, 5000))  // 5秒轮询间隔
 
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
+        const pollResponse = await fetch(`http://localhost:3001/api/mindmaps/associate/poll/${task_id}`)
+        const pollData = await pollResponse.json()
 
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            continue
-          }
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6).trim()
-            try {
-              const parsed = JSON.parse(data)
+        // 检查新节点
+        const newNodes = pollData.nodes.filter(
+          (n: MindMapNode) => !localNodes.some(ln => ln.id === n.id)
+        )
+        const newEdges = pollData.edges.filter(
+          (e: MindMapEdge) => !localEdges.some(le => le.id === e.id)
+        )
 
-              if (parsed.id && parsed.text) {
-                // It's a node - add to local accumulator
-                localNodes.push(parsed as MindMapNode)
-                setAssociateProgress(`已创建节点: ${parsed.text.slice(0, 30)}...`)
-              } else if (parsed.from && parsed.to) {
-                // It's an edge - add to local accumulator
-                localEdges.push(parsed as MindMapEdge)
-              } else if (parsed.total_nodes !== undefined) {
-                setAssociateProgress(`完成！共创建 ${parsed.total_nodes} 个节点`)
-              }
-            } catch (e) {
-              // Ignore parse errors
-            }
-          }
+        if (newNodes.length > 0) {
+          localNodes.push(...newNodes)
+          setAssociateProgress(`已创建 ${localNodes.length} 个节点...`)
         }
+
+        if (newEdges.length > 0) {
+          localEdges.push(...newEdges)
+        }
+
+        // 检查是否完成
+        if (pollData.done || pollData.status === 'completed') {
+          setAssociateProgress(`完成！共创建 ${localNodes.length} 个节点`)
+          break
+        }
+
+        if (pollData.status === 'error') {
+          throw new Error(pollData.error || '联想任务出错')
+        }
+
+        pollCount++
       }
 
-      // Batch update with all nodes and edges at once
+      // 3. 批量更新
       const { mindMapData: currentData } = useCanvasStore.getState()
-      if (currentData) {
+      if (currentData && localNodes.length > 0) {
         setMindMapData({
           ...currentData,
           nodes: [...currentData.nodes, ...localNodes],
