@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useCanvasStore, CanvasCard, CanvasConnection, MindMapEdge, MindMapNode, MindMapData } from '@/lib/canvas-store'
+import { useCanvasStore, MindMapEdge, MindMapNode, MindMapData, CanvasConnection } from '@/lib/canvas-store'
 import MindMapNodeComponent from './MindMapNode'
 import MindMapFloatingToolbar from './MindMapFloatingToolbar'
 import ReactMarkdown from 'react-markdown'
@@ -9,18 +9,17 @@ import remarkGfm from 'remark-gfm'
 
 export default function InfiniteCanvas() {
   const {
-    cards,
     connections,
-    selectedCardIds,
+    selectedNodeIds,
     isConnecting,
     connectionStart,
     showGrid,
     zoom,
     panOffset,
-    selectCard,
+    selectNode,
     deselectAll,
-    updateCardPosition,
-    removeCard,
+    updateNodePosition,
+    removeNode,
     startConnection,
     cancelConnection,
     addConnection,
@@ -50,7 +49,7 @@ export default function InfiniteCanvas() {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState({ x: 0, y: 0 })
-  const [draggingCard, setDraggingCard] = useState<string | null>(null)
+  const [draggingNode, setDraggingNode] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [connectingMousePos, setConnectingMousePos] = useState({ x: 0, y: 0 })
 
@@ -95,7 +94,7 @@ export default function InfiniteCanvas() {
   // Pan canvas
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.target === canvasRef.current || (e.target as HTMLElement).classList.contains('canvas-area')) {
-      if (e.button === 0 && !draggingCard) {
+      if (e.button === 0 && !draggingNode) {
         deselectAll()
         if (mindMapMode) {
           selectMindMapNode(null)
@@ -119,10 +118,10 @@ export default function InfiniteCanvas() {
         y: e.clientY - panStart.y,
       })
     }
-    if (draggingCard) {
+    if (draggingNode) {
       const canvasX = (e.clientX - panOffset.x) / zoom
       const canvasY = (e.clientY - panOffset.y) / zoom
-      updateCardPosition(draggingCard, {
+      updateNodePosition(draggingNode, {
         x: canvasX - dragOffset.x,
         y: canvasY - dragOffset.y,
       })
@@ -153,34 +152,34 @@ export default function InfiniteCanvas() {
 
   const handleMouseUp = () => {
     setIsPanning(false)
-    setDraggingCard(null)
+    setDraggingNode(null)
     setDraggingMindMapNode(null)
   }
 
-  // Card drag handlers
-  const handleCardMouseDown = (e: React.MouseEvent, card: CanvasCard) => {
+  // Node drag handlers
+  const handleNodeMouseDown = (e: React.MouseEvent, node: MindMapNode) => {
     e.stopPropagation()
 
     if (e.shiftKey && !isConnecting) {
       isConnectingRef.current = true  // Update ref immediately for event handlers
-      startConnection(card.id)
+      startConnection(node.id)
       return
     }
 
-    selectCard(card.id, e.metaKey || e.ctrlKey)
-    setDraggingCard(card.id)
-    // Store the offset between mouse position (in canvas coords) and card position
+    selectNode(node.id, e.metaKey || e.ctrlKey)
+    setDraggingNode(node.id)
+    // Store the offset between mouse position (in canvas coords) and node position
     const canvasX = (e.clientX - panOffset.x) / zoom
     const canvasY = (e.clientY - panOffset.y) / zoom
     setDragOffset({
-      x: canvasX - card.position.x,
-      y: canvasY - card.position.y,
+      x: canvasX - node.position.x,
+      y: canvasY - node.position.y,
     })
   }
 
-  const handleCardMouseUp = (cardId: string) => {
-    if (isConnecting && connectionStart && connectionStart !== cardId) {
-      addConnection(connectionStart, cardId)
+  const handleNodeMouseUp = (nodeId: string) => {
+    if (isConnecting && connectionStart && connectionStart !== nodeId) {
+      addConnection(connectionStart, nodeId)
       cancelConnection()
     }
   }
@@ -392,20 +391,20 @@ export default function InfiniteCanvas() {
     return `M ${from.x} ${from.y} Q ${from.x + midX} ${from.y} ${(from.x + to.x) / 2} ${(from.y + to.y) / 2} T ${to.x} ${to.y}`
   }
 
-  // Get card center for connection lines
-  const getCardCenter = (cardId: string) => {
-    const card = cards.find((c) => c.id === cardId)
-    if (!card) return { x: 0, y: 0 }
+  // Get node center for connection lines
+  const getNodeCenter = (nodeId: string) => {
+    const node = mindMapData?.nodes.find((n) => n.id === nodeId)
+    if (!node) return { x: 0, y: 0 }
     return {
-      x: card.position.x + 100,
-      y: card.position.y + 40,
+      x: node.position.x + 90,
+      y: node.position.y + 30,
     }
   }
 
   // Generate SVG path for connection
   const getConnectionPath = (conn: CanvasConnection) => {
-    const from = getCardCenter(conn.fromCardId)
-    const to = getCardCenter(conn.toCardId)
+    const from = getNodeCenter(conn.fromNodeId)
+    const to = getNodeCenter(conn.toNodeId)
     const dx = to.x - from.x
     const midX = dx / 2
     return `M ${from.x} ${from.y} Q ${from.x + midX} ${from.y} ${(from.x + to.x) / 2} ${(from.y + to.y) / 2} T ${to.x} ${to.y}`
@@ -484,7 +483,7 @@ export default function InfiniteCanvas() {
           })}
 
           {/* Regular connections */}
-          {!mindMapMode && connections.map((conn) => (
+          {connections.map((conn) => (
             <g key={conn.id}>
               <path
                 d={getConnectionPath(conn)}
@@ -492,8 +491,8 @@ export default function InfiniteCanvas() {
               />
               {/* Arrow head */}
               <circle
-                cx={getCardCenter(conn.toCardId).x}
-                cy={getCardCenter(conn.toCardId).y}
+                cx={getNodeCenter(conn.toNodeId).x}
+                cy={getNodeCenter(conn.toNodeId).y}
                 r={4}
                 fill="url(#lineGradient)"
               />
@@ -501,9 +500,9 @@ export default function InfiniteCanvas() {
           ))}
 
           {/* Connecting line preview */}
-          {isConnecting && connectionStart && !mindMapMode && (
+          {isConnecting && connectionStart && (
             <path
-              d={`M ${getCardCenter(connectionStart).x} ${getCardCenter(connectionStart).y} L ${connectingMousePos.x} ${connectingMousePos.y}`}
+              d={`M ${getNodeCenter(connectionStart).x} ${getNodeCenter(connectionStart).y} L ${connectingMousePos.x} ${connectingMousePos.y}`}
               className="connection-preview"
             />
           )}
@@ -518,7 +517,7 @@ export default function InfiniteCanvas() {
         </svg>
 
         {/* MindMap nodes */}
-        {mindMapMode && (mindMapData?.nodes || []).map((node) => (
+        {(mindMapData?.nodes || []).map((node) => (
           <MindMapNodeComponent
             key={node.id}
             node={node}
@@ -543,48 +542,6 @@ export default function InfiniteCanvas() {
             onDragStart={(e) => handleMindMapDragStart(node.id, e)}
           />
         ))}
-
-        {/* Cards */}
-        {cards.map((card) => (
-          <div
-            key={card.id}
-            className={`concept-card ${
-              selectedCardIds.includes(card.id) ? 'selected' : ''
-            } ${draggingCard === card.id ? 'dragging' : ''}`}
-            style={{
-              left: card.position.x,
-              top: card.position.y,
-              zIndex: draggingCard === card.id ? 1000 : selectedCardIds.includes(card.id) ? 100 : 1,
-            }}
-            onMouseDown={(e) => handleCardMouseDown(e, card)}
-            onMouseUp={() => handleCardMouseUp(card.id)}
-          >
-            <div className="card-title">{card.concept.title}</div>
-            <p className="card-description">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {card.userEditedDescription || card.concept.description}
-              </ReactMarkdown>
-            </p>
-            {card.concept.slideId && (
-              <div className="card-footer">
-                <span className="card-source">
-                  {card.concept.slideId.slice(0, 8)}...
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    removeCard(card.id)
-                  }}
-                  className="w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-tertiary)] hover:text-red-500 hover:bg-red-50 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
       </div>
 
       {/* Zoom indicator */}
@@ -593,20 +550,18 @@ export default function InfiniteCanvas() {
       </div>
 
       {/* MindMap Floating Toolbar */}
-      {mindMapMode && (
-        <MindMapFloatingToolbar
-          isConnecting={isMindMapConnecting}
-          onStartConnect={handleStartFloatingConnect}
-          onStopConnect={handleStopFloatingConnect}
-          onAddNode={handleFloatingAddNode}
-          onDeleteSelected={handleFloatingDeleteSelected}
-          onAutoLayout={handleFloatingAutoLayout}
-          onExplain={handleExplain}
-        />
-      )}
+      <MindMapFloatingToolbar
+        isConnecting={isMindMapConnecting}
+        onStartConnect={handleStartFloatingConnect}
+        onStopConnect={handleStopFloatingConnect}
+        onAddNode={handleFloatingAddNode}
+        onDeleteSelected={handleFloatingDeleteSelected}
+        onAutoLayout={handleFloatingAutoLayout}
+        onExplain={handleExplain}
+      />
 
       {/* Empty state */}
-      {!mindMapMode && cards.length === 0 && (
+      {(mindMapData?.nodes?.length || 0) === 0 && (
         <div className="empty-state">
           <div className="empty-state-icon">🧠</div>
           <h2>开始你的知识之旅</h2>

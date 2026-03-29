@@ -13,7 +13,7 @@ interface Message {
 }
 
 export default function ChatPanel() {
-  const { slides, activeSlideId, addCard, selectedCardIds, cards, lastAiMessage, setLastAiMessage } = useCanvasStore()
+  const { slides, activeSlideId, addMindMapNode, selectedMindMapNodeId, mindMapData, lastAiMessage, setLastAiMessage } = useCanvasStore()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -36,7 +36,7 @@ export default function ChatPanel() {
   }, [lastAiMessage, setLastAiMessage])
 
   const activeSlide = slides.find((s) => s.id === activeSlideId)
-  const selectedCards = cards.filter((c) => selectedCardIds.includes(c.id))
+  const selectedNode = mindMapData?.nodes.find((n) => n.id === selectedMindMapNodeId)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -65,7 +65,7 @@ export default function ChatPanel() {
           message: input,
           userId: 'default',
           slideId: activeSlideId,
-          selectedCards: selectedCards.map(c => c.id),
+          selectedCards: selectedNode ? [selectedNode.id] : [],
         }),
       })
 
@@ -92,7 +92,15 @@ export default function ChatPanel() {
   }
 
   const handleConceptClick = (concept: Concept) => {
-    addCard(concept)
+    const mindMapNode = {
+      id: `mindmap-node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text: `## ${concept.title}\n\n${concept.description}`,
+      position: {
+        x: 200 + Math.random() * 400,
+        y: 200 + Math.random() * 200,
+      },
+    }
+    addMindMapNode(mindMapNode)
   }
 
   return (
@@ -191,10 +199,10 @@ export default function ChatPanel() {
       </div>
 
       {/* Selected concepts indicator */}
-      {selectedCards.length > 0 && (
+      {selectedNode && (
         <div className="px-5 py-3 bg-[var(--primary-light)] border-t border-[var(--primary)]/20">
           <p className="text-sm text-[var(--primary)] font-medium">
-            已选中 {selectedCards.length} 个概念
+            已选中概念: {selectedNode.text.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '')}
           </p>
         </div>
       )}

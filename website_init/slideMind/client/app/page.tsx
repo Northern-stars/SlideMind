@@ -12,13 +12,13 @@ import { useCanvasStore } from '@/lib/canvas-store'
 export default function Home() {
   const [showUploader, setShowUploader] = useState(false)
   const [showImporter, setShowImporter] = useState(false)
-  const { slides, cards, mindMapMode } = useCanvasStore()
+  const { slides, mindMapData } = useCanvasStore()
 
   return (
     <div className="app-root">
       {/* Toolbar */}
       <CanvasToolbar />
-      {mindMapMode && <MindMapToolbar />}
+      <MindMapToolbar />
 
       {/* Main content area */}
       <div className="app-main">
@@ -49,7 +49,7 @@ export default function Home() {
         </div>
 
         {/* Canvas hints */}
-        {cards.length === 0 && !mindMapMode && (
+        {(mindMapData?.nodes?.length || 0) === 0 && (
           <div className="canvas-hints animate-fadeIn">
             <div className="hint-item">
               <kbd>Shift</kbd>

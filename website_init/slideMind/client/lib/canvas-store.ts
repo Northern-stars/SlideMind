@@ -7,18 +7,24 @@ export interface Concept {
   description: string
 }
 
-export interface CanvasCard {
+// Unified node type - used for both canvas cards and mindmap nodes
+export interface MindMapNode {
   id: string
-  conceptId: string
-  concept: Concept
+  text: string  // Markdown content (title + description combined)
   position: { x: number; y: number }
+  color?: string  // Border color for selected state
+  width?: number  // Node width for resize
+  height?: number  // Node height for resize
+  // Canvas card fields (optional for mindmap nodes)
+  conceptId?: string
+  concept?: Concept
   userEditedDescription?: string
 }
 
 export interface CanvasConnection {
   id: string
-  fromCardId: string
-  toCardId: string
+  fromNodeId: string
+  toNodeId: string
   label?: string
   type: 'solid' | 'dashed'
 }
@@ -39,16 +45,7 @@ export interface ChatMessage {
   timestamp: Date
 }
 
-// MindMap types
-export interface MindMapNode {
-  id: string
-  text: string
-  position: { x: number; y: number }
-  color?: string  // Border color for selected state
-  width?: number  // Node width for resize
-  height?: number  // Node height for resize
-}
-
+// MindMap Edge type
 export interface MindMapEdge {
   id: string
   from: string
@@ -66,12 +63,12 @@ export interface MindMapData {
 }
 
 interface CanvasState {
-  // Canvas elements
-  cards: CanvasCard[]
+  // Canvas elements (unified - all nodes are MindMapNodes)
+  nodes: MindMapNode[]
   connections: CanvasConnection[]
 
   // Selection
-  selectedCardIds: string[]
+  selectedNodeIds: string[]
   selectedConnectionIds: string[]
 
   // Interaction mode
@@ -102,18 +99,19 @@ interface CanvasState {
   selectedTermNodeId: string | null  // Node ID where the term was selected
 
   // Actions
-  addCard: (concept: Concept, position?: { x: number; y: number }) => void
-  removeCard: (cardId: string) => void
-  updateCardPosition: (cardId: string, position: { x: number; y: number }) => void
-  updateCardDescription: (cardId: string, description: string) => void
+  addNode: (node: MindMapNode) => void
+  addNodeFromConcept: (concept: Concept, position?: { x: number; y: number }) => void
+  removeNode: (nodeId: string) => void
+  updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
+  updateNodeDescription: (nodeId: string, description: string) => void
 
-  addConnection: (fromCardId: string, toCardId: string, type?: 'solid' | 'dashed') => void
+  addConnection: (fromNodeId: string, toNodeId: string, type?: 'solid' | 'dashed') => void
   removeConnection: (connectionId: string) => void
 
-  selectCard: (cardId: string, multi?: boolean) => void
+  selectNode: (nodeId: string, multi?: boolean) => void
   deselectAll: () => void
 
-  startConnection: (cardId: string) => void
+  startConnection: (nodeId: string) => void
   cancelConnection: () => void
 
   setZoom: (zoom: number) => void
@@ -141,9 +139,9 @@ interface CanvasState {
 }
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
-  cards: [],
+  nodes: [],
   connections: [],
-  selectedCardIds: [],
+  selectedNodeIds: [],
   selectedConnectionIds: [],
   isConnecting: false,
   connectionStart: null,
@@ -164,61 +162,66 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   selectedTerm: null,
   selectedTermNodeId: null,
 
-  addCard: (concept, position) => {
-    const id = `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    const card: CanvasCard = {
+  addNodeFromConcept: (concept, position) => {
+    const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const node: MindMapNode = {
       id,
       conceptId: concept.id,
       concept,
-      position: position || { 
-        x: 200 + Math.random() * 200, 
-        y: 200 + Math.random() * 200 
+      text: `**${concept.title}**\n\n${concept.description}`,
+      position: position || {
+        x: 200 + Math.random() * 200,
+        y: 200 + Math.random() * 200
       },
     }
-    set((state) => ({ cards: [...state.cards, card] }))
+    set((state) => ({ nodes: [...state.nodes, node] }))
   },
 
-  removeCard: (cardId) => {
+  addNode: (node) => {
+    set((state) => ({ nodes: [...state.nodes, node] }))
+  },
+
+  removeNode: (nodeId) => {
     set((state) => ({
-      cards: state.cards.filter((c) => c.id !== cardId),
+      nodes: state.nodes.filter((n) => n.id !== nodeId),
       connections: state.connections.filter(
-        (conn) => conn.fromCardId !== cardId && conn.toCardId !== cardId
+        (conn) => conn.fromNodeId !== nodeId && conn.toNodeId !== nodeId
       ),
-      selectedCardIds: state.selectedCardIds.filter((id) => id !== cardId),
+      selectedNodeIds: state.selectedNodeIds.filter((id) => id !== nodeId),
     }))
   },
 
-  updateCardPosition: (cardId, position) => {
+  updateNodePosition: (nodeId, position) => {
     set((state) => ({
-      cards: state.cards.map((c) =>
-        c.id === cardId ? { ...c, position } : c
+      nodes: state.nodes.map((n) =>
+        n.id === nodeId ? { ...n, position } : n
       ),
     }))
   },
 
-  updateCardDescription: (cardId, description) => {
+  updateNodeDescription: (nodeId, description) => {
     set((state) => ({
-      cards: state.cards.map((c) =>
-        c.id === cardId ? { ...c, userEditedDescription: description } : c
+      nodes: state.nodes.map((n) =>
+        n.id === nodeId ? { ...n, userEditedDescription: description } : n
       ),
     }))
   },
 
-  addConnection: (fromCardId, toCardId, type = 'solid') => {
+  addConnection: (fromNodeId, toNodeId, type = 'solid') => {
     const exists = get().connections.some(
       (c) =>
-        (c.fromCardId === fromCardId && c.toCardId === toCardId) ||
-        (c.fromCardId === toCardId && c.toCardId === fromCardId)
+        (c.fromNodeId === fromNodeId && c.toNodeId === toNodeId) ||
+        (c.fromNodeId === toNodeId && c.toNodeId === fromNodeId)
     )
-    if (exists || fromCardId === toCardId) return
+    if (exists || fromNodeId === toNodeId) return
 
     const id = `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    const fromCard = get().cards.find((c) => c.id === fromCardId)
-    const toCard = get().cards.find((c) => c.id === toCardId)
-    const connectionType = fromCard?.concept.slideId !== toCard?.concept.slideId ? 'dashed' : type
+    const fromNode = get().nodes.find((n) => n.id === fromNodeId)
+    const toNode = get().nodes.find((n) => n.id === toNodeId)
+    const connectionType = fromNode?.concept?.slideId !== toNode?.concept?.slideId ? 'dashed' : type
 
     set((state) => ({
-      connections: [...state.connections, { id, fromCardId, toCardId, type: connectionType }],
+      connections: [...state.connections, { id, fromNodeId, toNodeId, type: connectionType }],
     }))
   },
 
@@ -229,26 +232,26 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     }))
   },
 
-  selectCard: (cardId, multi = false) => {
+  selectNode: (nodeId, multi = false) => {
     set((state) => {
       if (multi) {
-        const isSelected = state.selectedCardIds.includes(cardId)
+        const isSelected = state.selectedNodeIds.includes(nodeId)
         return {
-          selectedCardIds: isSelected
-            ? state.selectedCardIds.filter((id) => id !== cardId)
-            : [...state.selectedCardIds, cardId],
+          selectedNodeIds: isSelected
+            ? state.selectedNodeIds.filter((id) => id !== nodeId)
+            : [...state.selectedNodeIds, nodeId],
         }
       }
-      return { selectedCardIds: [cardId] }
+      return { selectedNodeIds: [nodeId] }
     })
   },
 
   deselectAll: () => {
-    set({ selectedCardIds: [], selectedConnectionIds: [], isConnecting: false, connectionStart: null })
+    set({ selectedNodeIds: [], selectedConnectionIds: [], isConnecting: false, connectionStart: null })
   },
 
-  startConnection: (cardId) => {
-    set({ isConnecting: true, connectionStart: cardId })
+  startConnection: (nodeId) => {
+    set({ isConnecting: true, connectionStart: nodeId })
   },
 
   cancelConnection: () => {

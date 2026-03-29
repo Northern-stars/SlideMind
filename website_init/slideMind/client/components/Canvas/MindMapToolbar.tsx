@@ -32,16 +32,8 @@ export default function MindMapToolbar() {
   const [isAssociating, setIsAssociating] = useState(false)
   const [associateProgress, setAssociateProgress] = useState('')
 
-  const handleEnterMindMap = () => {
-    setMindMapMode(true)
-  }
-
-  const handleExitMindMap = () => {
-    setMindMapMode(false)
-    setMindMapData(null)
-  }
-
   const handleNewMindMap = async () => {
+    if (!mindMapMode) setMindMapMode(true)
     setIsLoading(true)
     try {
       const res = await fetch('http://localhost:3001/api/mindmaps', {
@@ -59,6 +51,7 @@ export default function MindMapToolbar() {
   }
 
   const handleLoadMindMaps = async () => {
+    if (!mindMapMode) setMindMapMode(true)
     setIsLoading(true)
     try {
       const res = await fetch('http://localhost:3001/api/mindmaps')
@@ -73,6 +66,7 @@ export default function MindMapToolbar() {
   }
 
   const handleSelectMindMap = async (id: string) => {
+    if (!mindMapMode) setMindMapMode(true)
     setIsLoading(true)
     try {
       const res = await fetch(`http://localhost:3001/api/mindmaps/${id}`)
@@ -112,6 +106,7 @@ export default function MindMapToolbar() {
   }
 
   const handleAddNode = () => {
+    if (!mindMapMode) setMindMapMode(true)
     // If no mindMapData exists, create a default one
     if (!mindMapData) {
       const defaultData: MindMapData = {
@@ -146,6 +141,7 @@ export default function MindMapToolbar() {
 
   const handleConceptAssociate = async () => {
     if (!associateText.trim()) return
+    if (!mindMapMode) setMindMapMode(true)
 
     // Create mindmap data synchronously first
     const mindmapId = `mindmap-${Date.now()}`
@@ -242,19 +238,6 @@ export default function MindMapToolbar() {
     }
   }
 
-  if (!mindMapMode) {
-    return (
-      <div className="mindmap-toolbar">
-        <button onClick={handleEnterMindMap} className="mindmap-toolbar-btn primary">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-          </svg>
-          思维导图模式
-        </button>
-      </div>
-    )
-  }
-
   return (
     <>
       <div className="mindmap-toolbar active">
@@ -346,15 +329,6 @@ export default function MindMapToolbar() {
             删除节点
           </button>
         </div>
-
-        <div className="mindmap-toolbar-divider" />
-
-        <button onClick={handleExitMindMap} className="mindmap-toolbar-btn">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          退出
-        </button>
       </div>
 
       {/* Load Modal */}

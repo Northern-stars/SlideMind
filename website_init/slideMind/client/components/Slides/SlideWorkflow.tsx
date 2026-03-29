@@ -36,7 +36,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
 }
 
 export default function SlideWorkflow() {
-  const { addSlide, updateSlideSummary, slides, addCard, cards } = useCanvasStore()
+  const { addSlide, updateSlideSummary, slides, mindMapData, addMindMapNode } = useCanvasStore()
   const [currentStep, setCurrentStep] = useState(1)
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -134,15 +134,31 @@ export default function SlideWorkflow() {
 
   // Handle concept selection
   const handleConceptClick = (concept: Concept) => {
-    addCard(concept)
+    const mindMapNode = {
+      id: `mindmap-node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text: `## ${concept.title}\n\n${concept.description}`,
+      position: {
+        x: 200 + Math.random() * 400,
+        y: 200 + Math.random() * 200,
+      },
+    }
+    addMindMapNode(mindMapNode)
     setCurrentStep(3) // Move to "Select Concepts" step
   }
 
-  // Manual selection mode - add all concepts as cards
+  // Manual selection mode - add all concepts as nodes
   const handleAddAllConcepts = () => {
     if (activeSlide?.concepts) {
       activeSlide.concepts.forEach((concept) => {
-        addCard(concept)
+        const mindMapNode = {
+          id: `mindmap-node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          text: `## ${concept.title}\n\n${concept.description}`,
+          position: {
+            x: 200 + Math.random() * 400,
+            y: 200 + Math.random() * 200,
+          },
+        }
+        addMindMapNode(mindMapNode)
       })
       setCurrentStep(4)
     }
@@ -224,13 +240,16 @@ export default function SlideWorkflow() {
                   <h4 className="text-sm font-semibold text-[var(--text-primary)]">📝 摘要</h4>
                   <button
                     onClick={() => {
-                      const summaryCardConcept: Concept = {
-                        id: `summary-${Date.now()}`,
-                        slideId: activeSlide.id,
-                        title: `📄 ${activeSlide.filename || '文件摘要'}`,
-                        description: activeSlide.summary || '',
+                      const summaryContent = `## 📄 ${activeSlide.filename || '文件摘要'}\n\n${activeSlide.summary || '暂无摘要内容'}`
+                      const mindMapNode = {
+                        id: `mindmap-node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                        text: summaryContent,
+                        position: {
+                          x: 300 + Math.random() * 300,
+                          y: 200 + Math.random() * 200,
+                        },
                       }
-                      addCard(summaryCardConcept)
+                      addMindMapNode(mindMapNode)
                     }}
                     className="px-3 py-1 text-xs font-medium rounded-full bg-[var(--secondary)] text-white hover:bg-[var(--secondary)]/90 transition-colors flex items-center gap-1"
                   >
@@ -313,7 +332,7 @@ export default function SlideWorkflow() {
       )}
 
       {/* Step 3-4: Build mind map hints */}
-      {(currentStep >= 3 || cards.length > 0) && (
+      {(currentStep >= 3 || (mindMapData?.nodes?.length ?? 0) > 0) && (
         <div className="card bg-gradient-to-r from-[var(--primary-light)] to-[var(--secondary)]/10 border-[var(--primary)]/20 animate-fadeIn">
           <div className="flex items-start gap-3">
             <div className="text-2xl">💡</div>
