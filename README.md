@@ -39,15 +39,15 @@ Step 4: Drag and connect on the canvas to build your mind map
 cd client
 npm install
 
-# Backend
-cd ../server
-npm install
+# Backend (Python Flask)
+cd ../backend
+pip install -r requirements.txt
 ```
 
 ### 2. Configure API Key
 
 ```bash
-# Edit server/.env
+# Edit backend/.env
 MINIMAX_API_KEY=your_MiniMax_API_Key
 ```
 
@@ -57,7 +57,7 @@ Get your API Key: https://www.minimax.chat/
 
 ```bash
 # Terminal 1: Backend
-cd server && npm run dev
+cd backend && python app.py
 
 # Terminal 2: Frontend
 cd client && npm run dev
@@ -87,9 +87,9 @@ Open your browser: **http://localhost:3000**
 | Frontend | Next.js 14 + React 18 + TypeScript |
 | Styling | Tailwind CSS (Lovart AI style) |
 | State Management | Zustand |
-| Backend | Express.js |
+| Backend | Python Flask |
 | AI | MiniMax API (MiniMax-M2) |
-| File Parsing | JSZip (PPTX), pdf-parse (PDF) |
+| File Parsing | Spire.Presentation (PPTX), pypdf (PDF), PaddleOCR |
 
 ---
 
@@ -105,14 +105,16 @@ slideMind/
 │   │   └── Slides/           # Upload-related
 │   └── lib/                 # State management
 │
-├── server/                    # Express backend
+├── backend/                    # Python Flask backend
 │   ├── routes/               # API routes
-│   │   ├── slides.js        # File upload & parsing
-│   │   ├── concepts.js      # Concept card CRUD
-│   │   └── chat.js          # AI chat
-│   └── services/
-│       ├── minimax.js        # MiniMax API
-│       └── slide-parser.js   # PPTX/PDF parsing
+│   │   ├── slides.py        # File upload & parsing
+│   │   ├── mindmap.py       # Mind map operations
+│   │   └── chat.py          # AI chat
+│   ├── services/
+│   │   ├── slide_parser.py    # PPTX/PDF parsing
+│   │   ├── mindmap_service.py # Mind map logic
+│   │   └── api_calling.py    # MiniMax API
+│   └── main.py               # Flask app entry
 │
 ├── SPEC.md                    # Detailed design specification
 └── README.md                  # This file
@@ -150,8 +152,8 @@ npm run build  # Output in .next/
 ```
 
 ### Backend Deployment
-- Requires Node.js 18+
-- Use PM2 to manage processes
+- Requires Python 3.9+
+- Use Gunicorn or similar to manage processes
 - HTTPS recommended for production
 
 ### Production Recommendations
